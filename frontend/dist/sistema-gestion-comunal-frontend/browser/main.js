@@ -1,17 +1,17 @@
 import {
   LoadingService
-} from "./chunk-SZESWSHM.js";
+} from "./chunk-BN3C26DI.js";
 import {
   AuthService
-} from "./chunk-JIMLNGHF.js";
+} from "./chunk-2U7HEYPH.js";
 import {
   Router,
   RouterOutlet,
   provideRouter
-} from "./chunk-2SF4ZNYJ.js";
+} from "./chunk-PEKNYEHS.js";
 import {
   NotificationService
-} from "./chunk-OL7LJQ7U.js";
+} from "./chunk-CLG3ONYS.js";
 import {
   AUTO_STYLE,
   AnimationGroupPlayer,
@@ -20,7 +20,7 @@ import {
   sequence,
   style,
   ɵPRE_STYLE
-} from "./chunk-5275AG3Z.js";
+} from "./chunk-6V3W7KQ5.js";
 import {
   ANIMATION_MODULE_TYPE,
   BrowserModule,
@@ -49,7 +49,7 @@ import {
   ɵɵdefineNgModule,
   ɵɵelement,
   ɵɵinject
-} from "./chunk-NVPU2YFC.js";
+} from "./chunk-RAFJE6SV.js";
 import {
   __objRest,
   __spreadValues
@@ -4159,12 +4159,12 @@ var authGuard = (route, state) => {
 var routes = [
   {
     path: "auth",
-    loadChildren: () => import("./chunk-ZVY7W6B6.js").then((m) => m.AUTH_ROUTES)
+    loadChildren: () => import("./chunk-IODEWAFI.js").then((m) => m.AUTH_ROUTES)
   },
   {
     path: "",
     canActivate: [authGuard],
-    loadComponent: () => import("./chunk-7PJS6SKP.js").then((m) => m.MainLayoutComponent),
+    loadComponent: () => import("./chunk-PHFCRELO.js").then((m) => m.MainLayoutComponent),
     children: [
       {
         path: "",
@@ -4173,49 +4173,57 @@ var routes = [
       },
       {
         path: "dashboard",
-        loadComponent: () => import("./chunk-CCME4FBA.js").then((m) => m.DashboardComponent)
+        loadComponent: () => import("./chunk-2IFSPXPC.js").then((m) => m.DashboardComponent)
       },
       {
         path: "comuneros",
-        loadComponent: () => import("./chunk-G4JFS4EB.js").then((m) => m.ComunerosComponent)
+        loadComponent: () => import("./chunk-WZANDEFJ.js").then((m) => m.ComunerosComponent)
       },
       {
         path: "asambleas",
-        loadComponent: () => import("./chunk-J2DGUP53.js").then((m) => m.AsambleasComponent)
+        loadComponent: () => import("./chunk-H47OCNYU.js").then((m) => m.AsambleasComponent)
       },
       {
         path: "asistencia",
-        loadComponent: () => import("./chunk-RJHYAF6J.js").then((m) => m.AsistenciaComponent)
+        loadComponent: () => import("./chunk-YEQ6W2G3.js").then((m) => m.AsistenciaComponent)
       },
       {
         path: "votaciones",
-        loadComponent: () => import("./chunk-YWEFVRNE.js").then((m) => m.VotacionesComponent)
+        loadComponent: () => import("./chunk-DDMLHUNT.js").then((m) => m.VotacionesComponent)
       },
       {
         path: "multas",
-        loadComponent: () => import("./chunk-W7LR4YN2.js").then((m) => m.MultasComponent)
+        loadComponent: () => import("./chunk-6B2M5GE6.js").then((m) => m.MultasComponent)
       },
       {
         path: "actas",
-        loadComponent: () => import("./chunk-LHPIXXTS.js").then((m) => m.ActasComponent)
+        loadComponent: () => import("./chunk-AM4ZBCOL.js").then((m) => m.ActasComponent)
       },
       {
         path: "reportes",
-        loadComponent: () => import("./chunk-NFMYXVDG.js").then((m) => m.ReportesComponent)
+        loadComponent: () => import("./chunk-NCNTZTAF.js").then((m) => m.ReportesComponent)
       },
       {
         path: "auditoria",
-        loadComponent: () => import("./chunk-EPFJJEZE.js").then((m) => m.AuditoriaComponent)
+        loadComponent: () => import("./chunk-UPFEBZY5.js").then((m) => m.AuditoriaComponent)
       },
       {
         path: "usuarios",
-        loadComponent: () => import("./chunk-MC3F3VF5.js").then((m) => m.UsuariosComponent)
+        loadComponent: () => import("./chunk-JHEQMEOS.js").then((m) => m.UsuariosComponent)
       },
       {
         path: "caserios",
-        loadComponent: () => import("./chunk-LVOGQN4U.js").then((m) => m.CaseriosComponent)
+        loadComponent: () => import("./chunk-YROVWUFW.js").then((m) => m.CaseriosComponent)
       }
     ]
+  },
+  {
+    path: "registrar-asistencia",
+    loadComponent: () => import("./chunk-FJIEIFW3.js").then((m) => m.AutoAsistenciaComponent)
+  },
+  {
+    path: "emitir-voto",
+    loadComponent: () => import("./chunk-WNHODWV5.js").then((m) => m.AutoVotacionComponent)
   },
   {
     path: "**",

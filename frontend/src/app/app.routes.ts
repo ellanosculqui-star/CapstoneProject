@@ -63,6 +63,14 @@ export const routes: Routes = [
     ]
   },
   {
+    path: 'registrar-asistencia',
+    loadComponent: () => import('./features/auto-asistencia/auto-asistencia.component').then(m => m.AutoAsistenciaComponent)
+  },
+  {
+    path: 'emitir-voto',
+    loadComponent: () => import('./features/auto-votacion/auto-votacion.component').then(m => m.AutoVotacionComponent)
+  },
+  {
     path: '**',
     redirectTo: 'auth/login'
   }

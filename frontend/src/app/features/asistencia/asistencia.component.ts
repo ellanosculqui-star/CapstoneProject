@@ -326,7 +326,7 @@ export class AsistenciaComponent implements OnInit, OnDestroy {
   get qrLinkDirecto(): string {
     if (!this.selectedAsambleaId) return '';
     const origin = window.location.origin;
-    return `${origin}/asistencia?asambleaId=${this.selectedAsambleaId}`;
+    return `${origin}/registrar-asistencia?asambleaId=${this.selectedAsambleaId}`;
   }
 
   get qrUrl(): string {

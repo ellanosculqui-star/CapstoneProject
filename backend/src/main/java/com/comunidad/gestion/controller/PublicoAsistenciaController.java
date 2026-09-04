@@ -82,4 +82,56 @@ public class PublicoAsistenciaController {
         AsistenciaResponse response = asistenciaService.marcarAsistenciaRapida(id, dni.trim(), EstadoAsistencia.PRESENTE);
         return ResponseEntity.ok(ApiResponse.success("Asistencia registrada correctamente", response));
     }
+
+    private final com.comunidad.gestion.service.VotacionService votacionService;
+    private final com.comunidad.gestion.repository.ComuneroRepository comuneroRepository;
+
+    /**
+     * Retorna datos públicos de una votación abierta para que el comunero vote vía QR.
+     */
+    @GetMapping("/votaciones/{id}")
+    @Operation(summary = "Obtener datos públicos de una votación para sufragio QR")
+    public ResponseEntity<ApiResponse<com.comunidad.gestion.dto.votacion.VotacionResponse>> obtenerVotacionPublica(@PathVariable Long id) {
+        com.comunidad.gestion.dto.votacion.VotacionResponse votacion = votacionService.obtenerPorId(id);
+        return ResponseEntity.ok(ApiResponse.success(votacion));
+    }
+
+    /**
+     * Permite a un comunero emitir su voto vía QR ingresando su DNI.
+     */
+    @PostMapping("/votaciones/{id}/votar")
+    @Operation(summary = "Emitir voto público con DNI vía QR")
+    public ResponseEntity<ApiResponse<com.comunidad.gestion.dto.votacion.VotacionResponse>> emitirVotoPublico(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String dni = body.get("dni");
+        if (dni == null || dni.isBlank()) {
+            throw new BadRequestException("El DNI es obligatorio");
+        }
+
+        String candidato = body.get("candidato");
+        String opcionStr = body.get("opcion"); // "A_FAVOR", "EN_CONTRA", "ABSTENCION", "CANDIDATO"
+
+        com.comunidad.gestion.entity.Comunero comunero = comuneroRepository.findByDni(dni.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Comunero no encontrado con DNI: " + dni));
+
+        com.comunidad.gestion.entity.enums.OpcionVoto opcion = com.comunidad.gestion.entity.enums.OpcionVoto.A_FAVOR;
+        if (candidato != null && !candidato.isBlank()) {
+            opcion = com.comunidad.gestion.entity.enums.OpcionVoto.CANDIDATO;
+        } else if (opcionStr != null) {
+            try {
+                opcion = com.comunidad.gestion.entity.enums.OpcionVoto.valueOf(opcionStr);
+            } catch (Exception ignored) {}
+        }
+
+        com.comunidad.gestion.dto.votacion.EmitirVotoRequest req = com.comunidad.gestion.dto.votacion.EmitirVotoRequest.builder()
+                .comuneroId(comunero.getId())
+                .opcion(opcion)
+                .candidatoElegido(candidato)
+                .build();
+
+        com.comunidad.gestion.dto.votacion.VotacionResponse resp = votacionService.emitirVoto(id, req);
+        return ResponseEntity.ok(ApiResponse.success("Voto registrado exitosamente", resp));
+    }
 }

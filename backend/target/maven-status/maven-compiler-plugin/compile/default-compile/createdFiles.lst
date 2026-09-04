@@ -49,6 +49,7 @@ com\comunidad\gestion\repository\AcuerdoRepository.class
 com\comunidad\gestion\service\impl\MultaServiceImpl.class
 com\comunidad\gestion\repository\ConfigMultaRepository.class
 com\comunidad\gestion\entity\enums\OpcionVoto.class
+com\comunidad\gestion\controller\PublicoAsistenciaController.class
 com\comunidad\gestion\entity\Usuario.class
 com\comunidad\gestion\entity\Voto$VotoBuilder.class
 com\comunidad\gestion\dto\comunero\ComuneroRequest$ComuneroRequestBuilder.class

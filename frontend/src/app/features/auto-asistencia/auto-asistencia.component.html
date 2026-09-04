@@ -1,0 +1,117 @@
+<!-- Pantalla: Cargando -->
+<div *ngIf="pantalla === 'cargando'" class="page-wrapper">
+  <div class="card-central">
+    <div class="spinner"></div>
+    <p class="cargando-txt">Cargando informacion de la asamblea...</p>
+  </div>
+</div>
+
+<!-- Pantalla: Error al cargar -->
+<div *ngIf="pantalla === 'error_carga'" class="page-wrapper">
+  <div class="card-central card-error">
+    <div class="icono-estado">&#9888;</div>
+    <h2>Enlace invalido</h2>
+    <p>{{ mensajeError }}</p>
+  </div>
+</div>
+
+<!-- Pantalla: Asamblea no en curso -->
+<div *ngIf="pantalla === 'no_en_curso'" class="page-wrapper">
+  <div class="card-central card-advertencia">
+    <div class="icono-estado">&#128274;</div>
+    <h2>Registro no disponible</h2>
+    <p>Esta asamblea no esta en curso actualmente.</p>
+    <div *ngIf="asamblea" class="info-asamblea">
+      <div class="info-item"><span class="label">Asamblea:</span> {{ asamblea.titulo }}</div>
+      <div class="info-item"><span class="label">Estado:</span> {{ asamblea.estado }}</div>
+    </div>
+    <p class="hint">Solo puedes registrar asistencia cuando la asamblea este EN CURSO.</p>
+  </div>
+</div>
+
+<!-- Pantalla: Formulario de registro -->
+<div *ngIf="pantalla === 'formulario'" class="page-wrapper">
+  <div class="card-central">
+    <div class="header-comunidad">
+      <div class="logo-comunidad">&#127968;</div>
+      <div>
+        <h1 class="titulo-comunidad">Comunidad Campesina</h1>
+        <p class="subtitulo-comunidad">La Enca&#241;ada &mdash; Cajamarca</p>
+      </div>
+    </div>
+    <div class="asamblea-info" *ngIf="asamblea">
+      <h2 class="asamblea-titulo">{{ asamblea.titulo }}</h2>
+      <div class="asamblea-detalles">
+        <div class="detalle-item">
+          <span class="detalle-icono">&#128197;</span>
+          <span>{{ formatearFecha(asamblea.fecha) }}</span>
+        </div>
+        <div class="detalle-item" *ngIf="asamblea.horaInicio">
+          <span class="detalle-icono">&#9200;</span>
+          <span>{{ formatearHora(asamblea.horaInicio) }}</span>
+        </div>
+        <div class="detalle-item" *ngIf="asamblea.lugar">
+          <span class="detalle-icono">&#128205;</span>
+          <span>{{ asamblea.lugar }}</span>
+        </div>
+      </div>
+      <div class="badge-en-curso">
+        <span class="punto-verde"></span> EN CURSO
+      </div>
+    </div>
+    <div class="formulario-dni">
+      <h3>Registra tu asistencia</h3>
+      <p class="instruccion">Ingresa tu numero de DNI para confirmar tu presencia en la asamblea.</p>
+      <div class="input-grupo">
+        <label for="dniInput">Numero de DNI</label>
+        <input
+          id="dniInput"
+          type="text"
+          inputmode="numeric"
+          [(ngModel)]="dni"
+          placeholder="Ej: 12345678"
+          class="input-dni"
+          maxlength="8"
+          autofocus
+        />
+      </div>
+      <button class="btn-registrar" (click)="registrarAsistencia()">
+        &#10003; Marcar mi Asistencia
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Pantalla: Enviando -->
+<div *ngIf="pantalla === 'enviando'" class="page-wrapper">
+  <div class="card-central">
+    <div class="spinner"></div>
+    <p class="cargando-txt">Registrando tu asistencia...</p>
+  </div>
+</div>
+
+<!-- Pantalla: Exito -->
+<div *ngIf="pantalla === 'exito'" class="page-wrapper">
+  <div class="card-central card-exito">
+    <div class="icono-exito">&#10004;</div>
+    <h2>Asistencia Registrada</h2>
+    <p *ngIf="nombreComunero" class="nombre-comunero">{{ nombreComunero }}</p>
+    <p class="mensaje-exito">Tu presencia ha sido confirmada exitosamente en la asamblea.</p>
+    <div *ngIf="asamblea" class="info-asamblea compacta">
+      <div class="info-item"><span class="label">Asamblea:</span> {{ asamblea.titulo }}</div>
+      <div class="info-item"><span class="label">Fecha:</span> {{ formatearFecha(asamblea.fecha) }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Pantalla: Error al registrar -->
+<div *ngIf="pantalla === 'error_registro'" class="page-wrapper">
+  <div class="card-central card-error">
+    <div class="icono-estado">&#10060;</div>
+    <h2>No se pudo registrar</h2>
+    <p>{{ mensajeError }}</p>
+    <button class="btn-reintentar" (click)="reintentar()">
+      &#8635; Intentar de nuevo
+    </button>
+  </div>
+</div>

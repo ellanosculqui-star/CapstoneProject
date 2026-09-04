@@ -38,6 +38,9 @@ public class Voto {
     @Column(nullable = false, length = 20)
     private OpcionVoto opcion;
 
+    @Column(name = "candidato_elegido", length = 150)
+    private String candidatoElegido;
+
     @Column(name = "fecha_hora", nullable = false)
     @Builder.Default
     private LocalDateTime fechaHora = LocalDateTime.now();

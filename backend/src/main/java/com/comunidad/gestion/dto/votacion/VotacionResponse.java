@@ -27,4 +27,5 @@ public class VotacionResponse {
     private LocalDateTime fechaCreacion;
     private ResultadoVotacionDto resultado;
     private Boolean yaVotoUsuarioActual;
+    private java.util.List<String> candidatos;
 }

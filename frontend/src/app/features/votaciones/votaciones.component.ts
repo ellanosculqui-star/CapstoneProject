@@ -53,6 +53,7 @@ export class VotacionesComponent implements OnInit {
   @ViewChild('crearModal') crearModal!: TemplateRef<any>;
   @ViewChild('votarModal') votarModal!: TemplateRef<any>;
   @ViewChild('actaModal') actaModal!: TemplateRef<any>;
+  @ViewChild('qrModal') qrModal!: TemplateRef<any>;
 
   asambleas: AsambleaResponse[] = [];
   selectedAsambleaId: number | null = null;
@@ -64,10 +65,17 @@ export class VotacionesComponent implements OnInit {
   votacionForm!: FormGroup;
   dialogRef?: MatDialogRef<any>;
 
+  // Candidatos para elección de representantes
+  candidatosLista: string[] = [''];
+
+  // QR Modal
+  votacionParaQr: VotacionResponse | null = null;
+
   // Emitir voto
   votacionSeleccionada: VotacionResponse | null = null;
   comuneroSeleccionadoId: number | null = null;
   opcionVotoSeleccionada: 'A_FAVOR' | 'EN_CONTRA' | 'ABSTENCION' = 'A_FAVOR';
+  candidatoSeleccionadoAdmin: string = '';
 
   // Acta / Certificado
   votacionActa: VotacionResponse | null = null;
@@ -99,10 +107,24 @@ export class VotacionesComponent implements OnInit {
   initForm(): void {
     this.votacionForm = this.fb.group({
       titulo: ['', [Validators.required, Validators.minLength(4)]],
-      propuesta: ['', [Validators.required, Validators.minLength(10)]],
+      propuesta: ['', [Validators.required, Validators.minLength(5)]],
       descripcion: [''],
       tipo: ['MAYORIA_SIMPLE', Validators.required]
     });
+  }
+
+  agregarCandidatoInput(): void {
+    this.candidatosLista.push('');
+  }
+
+  removerCandidatoInput(index: number): void {
+    if (this.candidatosLista.length > 1) {
+      this.candidatosLista.splice(index, 1);
+    }
+  }
+
+  trackByIndex(index: number): number {
+    return index;
   }
 
   cargarAsambleas(): void {
@@ -159,8 +181,9 @@ export class VotacionesComponent implements OnInit {
       this.notify.warning('Seleccione una asamblea primero');
       return;
     }
+    this.candidatosLista = ['', ''];
     this.votacionForm.reset({ tipo: 'MAYORIA_SIMPLE' });
-    this.dialogRef = this.dialog.open(this.crearModal, { width: '580px' });
+    this.dialogRef = this.dialog.open(this.crearModal, { width: '620px' });
   }
 
   guardarVotacion(): void {
@@ -169,7 +192,16 @@ export class VotacionesComponent implements OnInit {
       return;
     }
 
-    const req: CrearVotacionRequest = this.votacionForm.value;
+    const req: CrearVotacionRequest = { ...this.votacionForm.value };
+    if (req.tipo === 'ELECCION_REPRESENTANTE') {
+      const validCands = this.candidatosLista.map(c => c.trim()).filter(c => c.length > 0);
+      if (validCands.length < 2) {
+        this.notify.warning('Debe registrar al menos 2 candidatos para la elección');
+        return;
+      }
+      req.candidatos = validCands;
+    }
+
     this.votacionService.crear(this.selectedAsambleaId, req).subscribe({
       next: (res) => {
         if (res.success) {
@@ -203,11 +235,41 @@ export class VotacionesComponent implements OnInit {
     });
   }
 
+  abrirModalQrVotacion(v: VotacionResponse): void {
+    this.votacionParaQr = v;
+    this.dialogRef = this.dialog.open(this.qrModal, { width: '440px' });
+  }
+
+  get qrVotacionLink(): string {
+    if (!this.votacionParaQr) return '';
+    const origin = window.location.origin;
+    return `${origin}/emitir-voto?votacionId=${this.votacionParaQr.id}`;
+  }
+
+  get qrVotacionUrl(): string {
+    if (!this.votacionParaQr) return '';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(this.qrVotacionLink)}`;
+  }
+
+  copiarQrVotacionLink(): void {
+    const link = this.qrVotacionLink;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).then(() => {
+        this.notify.success('Enlace de votación copiado al portapapeles');
+      });
+    }
+  }
+
+  probarQrVotacionLink(): void {
+    window.open(this.qrVotacionLink, '_blank');
+  }
+
   abrirModalVotar(v: VotacionResponse): void {
     this.votacionSeleccionada = v;
     this.comuneroSeleccionadoId = this.comunerosPresentes.length > 0 ? this.comunerosPresentes[0].comuneroId : null;
     this.opcionVotoSeleccionada = 'A_FAVOR';
-    this.dialogRef = this.dialog.open(this.votarModal, { width: '520px' });
+    this.candidatoSeleccionadoAdmin = (v.candidatos && v.candidatos.length > 0) ? v.candidatos[0] : '';
+    this.dialogRef = this.dialog.open(this.votarModal, { width: '540px' });
   }
 
   confirmarEmitirVoto(): void {
@@ -216,9 +278,13 @@ export class VotacionesComponent implements OnInit {
       return;
     }
 
+    const esEleccion = this.votacionSeleccionada.tipo === 'ELECCION_REPRESENTANTE' ||
+      (!!this.votacionSeleccionada.candidatos && this.votacionSeleccionada.candidatos.length > 0);
+
     const req: EmitirVotoRequest = {
       comuneroId: this.comuneroSeleccionadoId,
-      opcion: this.opcionVotoSeleccionada
+      opcion: esEleccion ? 'CANDIDATO' : this.opcionVotoSeleccionada,
+      candidatoElegido: esEleccion ? this.candidatoSeleccionadoAdmin : undefined
     };
 
     this.votacionService.emitirVoto(this.votacionSeleccionada.id, req).subscribe({
@@ -296,6 +362,25 @@ export class VotacionesComponent implements OnInit {
   }
 
   get votacionesAprobadasCount(): number {
-    return this.votaciones.filter(v => v.resultado?.resultadoDecision === 'APROBADA').length;
+    return this.votaciones.filter(v => v.resultado?.resultadoDecision === 'APROBADA' || v.resultado?.resultadoDecision?.startsWith('ELECTO')).length;
+  }
+
+  getCandidatosKeys(v: VotacionResponse): string[] {
+    if (v.resultado?.votosPorCandidato) {
+      return Object.keys(v.resultado.votosPorCandidato);
+    }
+    return v.candidatos || [];
+  }
+
+  getVotosCandidato(v: VotacionResponse, cand: string): number {
+    return v.resultado?.votosPorCandidato?.[cand] || 0;
+  }
+
+  getPctCandidato(v: VotacionResponse, cand: string): number {
+    if (v.resultado?.porcentajePorCandidato?.[cand] !== undefined) {
+      return Number(v.resultado.porcentajePorCandidato[cand]);
+    }
+    const tot = this.getTotalVotos(v);
+    return tot > 0 ? Math.round((this.getVotosCandidato(v, cand) / tot) * 100) : 0;
   }
 }

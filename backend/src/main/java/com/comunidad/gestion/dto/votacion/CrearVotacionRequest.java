@@ -25,4 +25,6 @@ public class CrearVotacionRequest {
     @NotNull(message = "El tipo de votación es obligatorio")
     @Builder.Default
     private TipoVotacion tipo = TipoVotacion.MAYORIA_SIMPLE;
+
+    private java.util.List<String> candidatos;
 }

@@ -38,6 +38,9 @@ public class Votacion {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String propuesta;
 
+    @Column(name = "candidatos", columnDefinition = "TEXT")
+    private String candidatos;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default

@@ -157,10 +157,21 @@ public class VotacionServiceImpl implements VotacionService {
             throw new BadRequestException("El comunero ya emitió su voto en esta votación");
         }
 
+        OpcionVoto opcionFinal = request.getOpcion();
+        String candElegido = request.getCandidatoElegido() != null ? request.getCandidatoElegido().trim() : null;
+
+        if (votacion.getTipo() == TipoVotacion.ELECCION_REPRESENTANTE) {
+            if (candElegido == null || candElegido.isBlank()) {
+                throw new BadRequestException("Debe seleccionar un candidato para esta elección");
+            }
+            opcionFinal = OpcionVoto.CANDIDATO;
+        }
+
         Voto voto = Voto.builder()
                 .votacion(votacion)
                 .comunero(comunero)
-                .opcion(request.getOpcion())
+                .opcion(opcionFinal)
+                .candidatoElegido(candElegido)
                 .fechaHora(LocalDateTime.now())
                 .build();
 
@@ -171,7 +182,7 @@ public class VotacionServiceImpl implements VotacionService {
                 currentUser,
                 TipoAccionAuditoria.REGISTRAR_VOTO,
                 "VOTACIONES",
-                "Voto emitido para comunero " + comunero.getCodigoComunero() + " en votación #" + id,
+                "Voto emitido para comunero " + comunero.getCodigoComunero() + " en votación #" + id + (candElegido != null ? " (Candidato: " + candElegido + ")" : ""),
                 "votos",
                 voto.getId(),
                 null,
@@ -203,6 +214,22 @@ public class VotacionServiceImpl implements VotacionService {
         long enContra = votoRepository.countByVotacionIdAndOpcion(votacion.getId(), OpcionVoto.EN_CONTRA);
         long abstencion = votoRepository.countByVotacionIdAndOpcion(votacion.getId(), OpcionVoto.ABSTENCION);
 
+        java.util.Map<String, Long> votosPorCandidato = new java.util.LinkedHashMap<>();
+        if (votacion.getTipo() == TipoVotacion.ELECCION_REPRESENTANTE) {
+            if (votacion.getCandidatos() != null && !votacion.getCandidatos().isBlank()) {
+                for (String c : votacion.getCandidatos().split(";;")) {
+                    votosPorCandidato.put(c.trim(), 0L);
+                }
+            }
+            List<Voto> votos = votoRepository.findByVotacionId(votacion.getId());
+            for (Voto v : votos) {
+                if (v.getCandidatoElegido() != null && !v.getCandidatoElegido().isBlank()) {
+                    String cand = v.getCandidatoElegido().trim();
+                    votosPorCandidato.put(cand, votosPorCandidato.getOrDefault(cand, 0L) + 1);
+                }
+            }
+        }
+
         boolean yaVoto = false;
         String username = getCurrentUsername();
         if (!"SISTEMA".equals(username) && !"ANONIMO".equals(username)) {
@@ -215,7 +242,7 @@ public class VotacionServiceImpl implements VotacionService {
             }
         }
 
-        return votacionMapper.toResponse(votacion, aFavor, enContra, abstencion, yaVoto);
+        return votacionMapper.toResponse(votacion, aFavor, enContra, abstencion, yaVoto, votosPorCandidato);
     }
 
     private String getCurrentUsername() {

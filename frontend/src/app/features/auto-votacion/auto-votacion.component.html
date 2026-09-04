@@ -1,0 +1,152 @@
+<!-- Pantalla: Cargando -->
+<div *ngIf="pantalla === 'cargando'" class="page-wrapper">
+  <div class="card-central">
+    <div class="spinner"></div>
+    <p class="cargando-txt">Cargando cédula de votación...</p>
+  </div>
+</div>
+
+<!-- Pantalla: Error al cargar -->
+<div *ngIf="pantalla === 'error_carga'" class="page-wrapper">
+  <div class="card-central card-error">
+    <div class="icono-estado">&#9888;</div>
+    <h2>Enlace de Votación Inválido</h2>
+    <p>{{ mensajeError }}</p>
+  </div>
+</div>
+
+<!-- Pantalla: Votación no abierta -->
+<div *ngIf="pantalla === 'no_abierta'" class="page-wrapper">
+  <div class="card-central card-advertencia">
+    <div class="icono-estado">&#128274;</div>
+    <h2>Votación no disponible</h2>
+    <p>Esta votación no se encuentra abierta en este momento.</p>
+    <div *ngIf="votacion" class="info-asamblea">
+      <div class="info-item"><span class="label">Asunto:</span> {{ votacion.titulo }}</div>
+      <div class="info-item"><span class="label">Estado:</span> {{ votacion.estado }}</div>
+    </div>
+    <p class="hint">Espere a que la mesa directiva dé inicio al sufragio en la asamblea.</p>
+  </div>
+</div>
+
+<!-- Pantalla: Formulario de sufragio -->
+<div *ngIf="pantalla === 'formulario'" class="page-wrapper">
+  <div class="card-central">
+    <div class="header-comunidad">
+      <div class="logo-comunidad">&#128499;</div>
+      <div>
+        <h1 class="titulo-comunidad">Cédula Digital de Sufragio</h1>
+        <p class="subtitulo-comunidad">Comunidad Campesina La Encañada</p>
+      </div>
+    </div>
+
+    <div class="asamblea-info" *ngIf="votacion">
+      <div class="badge-en-curso"><span class="punto-verde"></span> VOTACIÓN ABIERTA</div>
+      <h2 class="asamblea-titulo">{{ votacion.titulo }}</h2>
+      <p class="propuesta-texto" *ngIf="votacion.propuesta"><strong>Propuesta / Moción:</strong> {{ votacion.propuesta }}</p>
+      <p class="desc-texto" *ngIf="votacion.descripcion">{{ votacion.descripcion }}</p>
+    </div>
+
+    <!-- ELECCIÓN DE REPRESENTANTE: Candidatos -->
+    <div class="seccion-candidatos" *ngIf="esEleccion">
+      <h3>Seleccione su Representante:</h3>
+      <div class="candidatos-lista">
+        <div
+          class="candidato-card"
+          *ngFor="let cand of votacion?.candidatos"
+          [class.selected]="candidatoSeleccionado === cand"
+          (click)="seleccionarCandidato(cand)"
+        >
+          <div class="candidato-radio">
+            <span class="radio-dot" *ngIf="candidatoSeleccionado === cand">&#10003;</span>
+          </div>
+          <div class="candidato-info">
+            <span class="candidato-nombre">{{ cand }}</span>
+            <span class="candidato-badge">Candidato Postulante</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VOTACIÓN NORMAL: A Favor, En Contra, Abstención -->
+    <div class="seccion-opciones" *ngIf="!esEleccion">
+      <h3>Su Voto:</h3>
+      <div class="opciones-grid">
+        <div class="opc-card favor" [class.selected]="opcionGeneral === 'A_FAVOR'" (click)="seleccionarOpcionGeneral('A_FAVOR')">
+          <span class="opc-icono">&#128077;</span>
+          <span>A FAVOR</span>
+        </div>
+        <div class="opc-card contra" [class.selected]="opcionGeneral === 'EN_CONTRA'" (click)="seleccionarOpcionGeneral('EN_CONTRA')">
+          <span class="opc-icono">&#128078;</span>
+          <span>EN CONTRA</span>
+        </div>
+        <div class="opc-card abstencion" [class.selected]="opcionGeneral === 'ABSTENCION'" (click)="seleccionarOpcionGeneral('ABSTENCION')">
+          <span class="opc-icono">&#9898;</span>
+          <span>ABSTENCIÓN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input DNI del Comunero -->
+    <div class="formulario-dni">
+      <div class="input-grupo">
+        <label for="dniVoto">Número de DNI del Comunero</label>
+        <input
+          id="dniVoto"
+          type="text"
+          inputmode="numeric"
+          [(ngModel)]="dni"
+          placeholder="Ej: 12345678"
+          class="input-dni"
+          maxlength="8"
+        />
+        <span class="dni-help">Debe estar registrado como PRESENTE en la asamblea.</span>
+      </div>
+
+      <button
+        class="btn-emitir-voto"
+        (click)="emitirVoto()"
+        [disabled]="!dni.trim() || dni.trim().length < 6 || (esEleccion && !candidatoSeleccionado)"
+      >
+        &#9993; Emitir Mi Voto Oficial
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Pantalla: Enviando -->
+<div *ngIf="pantalla === 'enviando'" class="page-wrapper">
+  <div class="card-central">
+    <div class="spinner"></div>
+    <p class="cargando-txt">Procesando y encriptando su voto...</p>
+  </div>
+</div>
+
+<!-- Pantalla: Éxito -->
+<div *ngIf="pantalla === 'exito'" class="page-wrapper">
+  <div class="card-central card-exito">
+    <div class="icono-exito">&#10004;</div>
+    <h2>¡Voto Registrado con Éxito!</h2>
+    <p class="mensaje-exito">Su voto ha sido contabilizado formalmente en el acta de escrutinio de la asamblea comunal.</p>
+    <div class="voto-resumen" *ngIf="esEleccion">
+      <span class="label-resumen">Candidato Votado:</span>
+      <strong class="cand-resumen">{{ candidatoSeleccionado }}</strong>
+    </div>
+    <div class="voto-resumen" *ngIf="!esEleccion">
+      <span class="label-resumen">Opción Registrada:</span>
+      <strong class="cand-resumen">{{ opcionGeneral.replace('_', ' ') }}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Pantalla: Error al registrar -->
+<div *ngIf="pantalla === 'error_registro'" class="page-wrapper">
+  <div class="card-central card-error">
+    <div class="icono-estado">&#10060;</div>
+    <h2>No se pudo registrar el voto</h2>
+    <p>{{ mensajeError }}</p>
+    <button class="btn-reintentar" (click)="reintentar()">
+      &#8635; Intentar de nuevo
+    </button>
+  </div>
+</div>

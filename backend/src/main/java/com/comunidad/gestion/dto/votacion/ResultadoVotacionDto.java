@@ -19,5 +19,8 @@ public class ResultadoVotacionDto {
     private BigDecimal porcentajeAFavor;
     private BigDecimal porcentajeEnContra;
     private BigDecimal porcentajeAbstencion;
-    private String resultadoDecision; // "APROBADA", "RECHAZADA", "EMPATE"
+    private String resultadoDecision; // "APROBADA", "RECHAZADA", "EMPATE", "GANADOR: Nombre"
+    private java.util.Map<String, Long> votosPorCandidato;
+    private java.util.Map<String, BigDecimal> porcentajePorCandidato;
+    private String candidatoGanador;
 }

@@ -119,29 +119,43 @@
           <span class="total-badge">{{ getTotalVotos(v) }} votos emitidos</span>
         </div>
 
-        <div class="option-result favor">
-          <div class="result-header">
-            <span>🟢 A FAVOR ({{ getVotosAFavor(v) }})</span>
-            <strong>{{ pctAFavor(v) }}%</strong>
+        <!-- Vista de Resultados por Candidato (Elección de Representante) -->
+        <div *ngIf="v.tipo === 'ELECCION_REPRESENTANTE' || (v.candidatos && v.candidatos.length > 0)" class="candidatos-results-grid">
+          <div class="option-result candidato-res" *ngFor="let cand of getCandidatosKeys(v)">
+            <div class="result-header">
+              <span>👤 <strong>{{ cand }}</strong> ({{ getVotosCandidato(v, cand) }} votos)</span>
+              <strong>{{ getPctCandidato(v, cand) }}%</strong>
+            </div>
+            <mat-progress-bar mode="determinate" [value]="getPctCandidato(v, cand)"></mat-progress-bar>
           </div>
-          <mat-progress-bar mode="determinate" [value]="pctAFavor(v)"></mat-progress-bar>
         </div>
 
-        <div class="option-result contra">
-          <div class="result-header">
-            <span>🔴 EN CONTRA ({{ getVotosEnContra(v) }})</span>
-            <strong>{{ pctEnContra(v) }}%</strong>
+        <!-- Vista de Resultados Normales (A Favor / En Contra / Abstención) -->
+        <ng-container *ngIf="v.tipo !== 'ELECCION_REPRESENTANTE' && (!v.candidatos || v.candidatos.length === 0)">
+          <div class="option-result favor">
+            <div class="result-header">
+              <span>🟢 A FAVOR ({{ getVotosAFavor(v) }})</span>
+              <strong>{{ pctAFavor(v) }}%</strong>
+            </div>
+            <mat-progress-bar mode="determinate" [value]="pctAFavor(v)"></mat-progress-bar>
           </div>
-          <mat-progress-bar mode="determinate" [value]="pctEnContra(v)"></mat-progress-bar>
-        </div>
 
-        <div class="option-result abstencion">
-          <div class="result-header">
-            <span>⚪ ABSTENCIÓN ({{ getVotosAbstencion(v) }})</span>
-            <strong>{{ pctAbstencion(v) }}%</strong>
+          <div class="option-result contra">
+            <div class="result-header">
+              <span>🔴 EN CONTRA ({{ getVotosEnContra(v) }})</span>
+              <strong>{{ pctEnContra(v) }}%</strong>
+            </div>
+            <mat-progress-bar mode="determinate" [value]="pctEnContra(v)"></mat-progress-bar>
           </div>
-          <mat-progress-bar mode="determinate" [value]="pctAbstencion(v)"></mat-progress-bar>
-        </div>
+
+          <div class="option-result abstencion">
+            <div class="result-header">
+              <span>⚪ ABSTENCIÓN ({{ getVotosAbstencion(v) }})</span>
+              <strong>{{ pctAbstencion(v) }}%</strong>
+            </div>
+            <mat-progress-bar mode="determinate" [value]="pctAbstencion(v)"></mat-progress-bar>
+          </div>
+        </ng-container>
       </div>
     </mat-card-content>
 
@@ -154,6 +168,11 @@
       <!-- Botón Emitir Voto Comunero -->
       <button mat-raised-button class="btn-votar" *ngIf="v.estado === 'ABIERTA'" (click)="abrirModalVotar(v)">
         <mat-icon>how_to_vote</mat-icon> Registrar Voto
+      </button>
+
+      <!-- Botón QR de Votación -->
+      <button mat-stroked-button color="primary" *ngIf="v.estado === 'ABIERTA'" (click)="abrirModalQrVotacion(v)">
+        <mat-icon>qr_code_2</mat-icon> QR de Votación
       </button>
 
       <!-- Botón Cerrar y Computar -->
@@ -196,7 +215,7 @@
     </mat-form-field>
 
     <div class="tipo-votacion-group">
-      <label class="tipo-label">Regla de Mayoría Exigida:</label>
+      <label class="tipo-label">Tipo de Proceso / Regla:</label>
       <mat-radio-group formControlName="tipo" class="radio-vertical">
         <mat-radio-button value="MAYORIA_SIMPLE">
           <strong>Mayoría Simple</strong> (Más del 50% de los votos emitidos)
@@ -207,7 +226,30 @@
         <mat-radio-button value="UNANIMIDAD">
           <strong>Unanimidad</strong> (100% de aprobación sin votos en contra)
         </mat-radio-button>
+        <mat-radio-button value="ELECCION_REPRESENTANTE">
+          <strong>Elección de Representante / Autoridad</strong> (Postulantes/Candidatos)
+        </mat-radio-button>
       </mat-radio-group>
+    </div>
+
+    <!-- Lista dinámica de candidatos para ELECCION_REPRESENTANTE -->
+    <div class="candidatos-config-box" *ngIf="votacionForm.get('tipo')?.value === 'ELECCION_REPRESENTANTE'">
+      <div class="candidatos-config-header">
+        <h4>👥 Lista de Candidatos Postulantes</h4>
+        <button type="button" mat-stroked-button color="primary" (click)="agregarCandidatoInput()">
+          <mat-icon>person_add</mat-icon> Agregar Candidato
+        </button>
+      </div>
+      <p class="candidatos-help">Ingrese el nombre completo de los comuneros candidatos (ej: 4 postulantes):</p>
+      <div class="candidato-input-row" *ngFor="let c of candidatosLista; let idx = index; trackBy: trackByIndex">
+        <mat-form-field appearance="outline" class="candidato-field">
+          <mat-label>Candidato #{{ idx + 1 }}</mat-label>
+          <input matInput [(ngModel)]="candidatosLista[idx]" [ngModelOptions]="{standalone: true}" placeholder="Ej: Juan Quispe Morales">
+        </mat-form-field>
+        <button type="button" mat-icon-button color="warn" (click)="removerCandidatoInput(idx)" [disabled]="candidatosLista.length <= 2">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
     </div>
   </mat-dialog-content>
 
@@ -255,7 +297,28 @@
       </mat-form-field>
     </div>
 
-    <div class="opciones-voto-grid">
+    <!-- Opciones para ELECCION_REPRESENTANTE: Lista de Candidatos -->
+    <div class="candidatos-admin-vote" *ngIf="votacionSeleccionada?.tipo === 'ELECCION_REPRESENTANTE' || (votacionSeleccionada?.candidatos && votacionSeleccionada!.candidatos!.length > 0)">
+      <label class="candidatos-vote-label">Seleccione el Candidato a Elegir:</label>
+      <div class="candidatos-vote-grid">
+        <div
+          class="cand-vote-card"
+          *ngFor="let cand of votacionSeleccionada?.candidatos"
+          [class.selected]="candidatoSeleccionadoAdmin === cand"
+          (click)="candidatoSeleccionadoAdmin = cand"
+        >
+          <div class="cand-vote-icon">👤</div>
+          <div class="cand-vote-text">
+            <strong>{{ cand }}</strong>
+            <span>Postulante</span>
+          </div>
+          <mat-icon *ngIf="candidatoSeleccionadoAdmin === cand" class="check-icon">check_circle</mat-icon>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opciones normales: A Favor / En Contra / Abstención -->
+    <div class="opciones-voto-grid" *ngIf="votacionSeleccionada?.tipo !== 'ELECCION_REPRESENTANTE' && (!votacionSeleccionada?.candidatos || votacionSeleccionada!.candidatos!.length === 0)">
       <div class="voto-option favor" [class.selected]="opcionVotoSeleccionada === 'A_FAVOR'" (click)="opcionVotoSeleccionada = 'A_FAVOR'">
         <mat-icon>thumb_up</mat-icon>
         <span>A FAVOR</span>
@@ -374,6 +437,39 @@
         <mat-icon>print</mat-icon> Imprimir Acta
       </button>
     </mat-dialog-actions>
+  </div>
+</ng-template>
+
+<!-- ========================================== -->
+<!-- MODAL 4: CÓDIGO QR DE SUFRAGIO COMUNAL    -->
+<!-- ========================================== -->
+<ng-template #qrModal>
+  <div class="qr-dialog-content" *ngIf="votacionParaQr">
+    <h2><mat-icon>qr_code_2</mat-icon> Código QR de Votación en Vivo</h2>
+    <p>Los comuneros presentes pueden escanear este código con su celular para votar directamente:</p>
+
+    <div class="qr-image-box">
+      <img [src]="qrVotacionUrl" alt="QR Votación" class="qr-img">
+    </div>
+
+    <div class="qr-info">
+      <strong>{{ votacionParaQr.titulo }}</strong>
+      <span *ngIf="votacionParaQr.tipo === 'ELECCION_REPRESENTANTE'">🗳️ Elección de Representante ({{ votacionParaQr.candidatos?.length || 0 }} Candidatos)</span>
+      <span *ngIf="votacionParaQr.tipo !== 'ELECCION_REPRESENTANTE'">Moción: {{ formatTipo(votacionParaQr.tipo) }}</span>
+      <code class="qr-link-text">{{ qrVotacionLink }}</code>
+    </div>
+
+    <div class="qr-actions">
+      <button mat-stroked-button (click)="copiarQrVotacionLink()">
+        <mat-icon>content_copy</mat-icon> Copiar Enlace
+      </button>
+      <button mat-raised-button color="accent" (click)="probarQrVotacionLink()">
+        <mat-icon>open_in_new</mat-icon> Probar Cédula
+      </button>
+      <button mat-button mat-dialog-close>
+        Cerrar
+      </button>
+    </div>
   </div>
 </ng-template>
 

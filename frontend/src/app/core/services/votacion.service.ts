@@ -12,7 +12,10 @@ export interface ResultadoVotacionDto {
   porcentajeAFavor: number;
   porcentajeEnContra: number;
   porcentajeAbstencion: number;
-  resultadoDecision: string; // 'APROBADA' | 'RECHAZADA' | 'EMPATE'
+  resultadoDecision: string; // 'APROBADA' | 'RECHAZADA' | 'EMPATE' | 'ELECTO: Nombre'
+  votosPorCandidato?: { [candidato: string]: number };
+  porcentajePorCandidato?: { [candidato: string]: number };
+  candidatoGanador?: string;
 }
 
 export interface VotacionResponse {
@@ -22,7 +25,8 @@ export interface VotacionResponse {
   titulo: string;
   descripcion?: string;
   propuesta?: string;
-  tipo: 'MAYORIA_SIMPLE' | 'MAYORIA_CALIFICADA' | 'UNANIMIDAD' | string;
+  candidatos?: string[];
+  tipo: 'MAYORIA_SIMPLE' | 'MAYORIA_CALIFICADA' | 'UNANIMIDAD' | 'ELECCION_REPRESENTANTE' | string;
   estado: 'BORRADOR' | 'ABIERTA' | 'CERRADA' | string;
   fechaApertura?: string;
   fechaCierre?: string;
@@ -35,12 +39,14 @@ export interface CrearVotacionRequest {
   titulo: string;
   descripcion?: string;
   propuesta: string;
-  tipo: 'MAYORIA_SIMPLE' | 'MAYORIA_CALIFICADA' | 'UNANIMIDAD' | string;
+  tipo: 'MAYORIA_SIMPLE' | 'MAYORIA_CALIFICADA' | 'UNANIMIDAD' | 'ELECCION_REPRESENTANTE' | string;
+  candidatos?: string[];
 }
 
 export interface EmitirVotoRequest {
   comuneroId: number;
-  opcion: 'A_FAVOR' | 'EN_CONTRA' | 'ABSTENCION';
+  opcion: 'A_FAVOR' | 'EN_CONTRA' | 'ABSTENCION' | 'CANDIDATO';
+  candidatoElegido?: string;
 }
 
 @Injectable({ providedIn: 'root' })

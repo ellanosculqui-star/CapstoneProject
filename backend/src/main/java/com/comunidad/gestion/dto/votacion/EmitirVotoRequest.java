@@ -18,4 +18,6 @@ public class EmitirVotoRequest {
 
     @NotNull(message = "La opción de voto es obligatoria")
     private OpcionVoto opcion;
+
+    private String candidatoElegido;
 }
