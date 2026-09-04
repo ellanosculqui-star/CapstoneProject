@@ -1,0 +1,96 @@
+<div class="login-page">
+  <div class="login-container">
+    <!-- Left Panel - Branding -->
+    <div class="branding-panel">
+      <div class="brand-content">
+        <div class="brand-icon-wrapper">
+          <mat-icon class="brand-icon">account_balance</mat-icon>
+        </div>
+        <h1 class="brand-title">Sistema de Gestión Comunal</h1>
+        <p class="brand-subtitle">Digitalización y automatización de la gestión de asambleas de comunidades campesinas</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <mat-icon>people</mat-icon>
+            <span>Padrón de comuneros digital</span>
+          </div>
+          <div class="feature-item">
+            <mat-icon>fact_check</mat-icon>
+            <span>Control de asistencia en tiempo real</span>
+          </div>
+          <div class="feature-item">
+            <mat-icon>how_to_vote</mat-icon>
+            <span>Votaciones con resultados instantáneos</span>
+          </div>
+          <div class="feature-item">
+            <mat-icon>receipt_long</mat-icon>
+            <span>Gestión de multas y recaudación</span>
+          </div>
+          <div class="feature-item">
+            <mat-icon>description</mat-icon>
+            <span>Actas digitales con firma y aprobación</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel - Login Form -->
+    <div class="form-panel">
+      <mat-card class="login-card">
+        <mat-card-header>
+          <div class="login-header">
+            <h2>Iniciar Sesión</h2>
+            <p>Ingrese sus credenciales para acceder al sistema</p>
+          </div>
+        </mat-card-header>
+
+        <mat-card-content>
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" autocomplete="off">
+
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label>Usuario</mat-label>
+              <mat-icon matPrefix>person</mat-icon>
+              <input matInput formControlName="username" placeholder="Ingrese su nombre de usuario"
+                     autocomplete="username" [disabled]="loading">
+              <mat-error *ngIf="usernameCtrl?.hasError('required')">El usuario es obligatorio</mat-error>
+              <mat-error *ngIf="usernameCtrl?.hasError('minlength')">Mínimo 3 caracteres</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label>Contraseña</mat-label>
+              <mat-icon matPrefix>lock</mat-icon>
+              <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'"
+                     placeholder="Ingrese su contraseña" autocomplete="current-password" [disabled]="loading">
+              <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
+                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordCtrl?.hasError('required')">La contraseña es obligatoria</mat-error>
+              <mat-error *ngIf="passwordCtrl?.hasError('minlength')">Mínimo 6 caracteres</mat-error>
+            </mat-form-field>
+
+            <button mat-raised-button color="primary" type="submit" class="w-100 login-btn"
+                    [disabled]="loginForm.invalid || loading">
+              <mat-spinner *ngIf="loading" diameter="20" class="spinner-inline"></mat-spinner>
+              <span *ngIf="!loading">
+                <mat-icon>login</mat-icon>
+                Iniciar Sesión
+              </span>
+              <span *ngIf="loading">Autenticando...</span>
+            </button>
+          </form>
+        </mat-card-content>
+
+        <mat-card-footer>
+          <div class="credentials-hint">
+            <p>Cuentas de prueba disponibles:</p>
+            <div class="credential-chips">
+              <span class="chip">admin / admin123</span>
+              <span class="chip">presidente / presi123</span>
+              <span class="chip">secretario / secre123</span>
+              <span class="chip">tesorero / teso123</span>
+            </div>
+          </div>
+        </mat-card-footer>
+      </mat-card>
+    </div>
+  </div>
+</div>

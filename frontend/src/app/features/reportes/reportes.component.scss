@@ -1,0 +1,12 @@
+.print-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.tab-card {
+  border-radius: 12px;
+  .tab-content {
+    padding: 20px;
+  }
+}

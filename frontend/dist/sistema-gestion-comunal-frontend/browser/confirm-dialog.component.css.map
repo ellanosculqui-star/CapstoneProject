@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["confirm-dialog.component.ts"],
+  "sourcesContent": ["\n    .dialog-header {\n      display: flex;\n      align-items: center;\n      gap: 12px;\n      margin-bottom: 8px;\n    }\n    .dialog-content {\n      font-size: 1rem;\n      color: #4b5563;\n      min-width: 320px;\n    }\n  "],
+  "mappings": ";AACI,CAAA;AACE,WAAA;AACA,eAAA;AACA,OAAA;AACA,iBAAA;;AAEF,CAAA;AACE,aAAA;AACA,SAAA;AACA,aAAA;;",
+  "names": []
+}

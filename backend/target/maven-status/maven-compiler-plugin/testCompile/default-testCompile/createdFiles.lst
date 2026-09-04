@@ -1,0 +1,4 @@
+com\comunidad\gestion\unit\MultaServiceTest.class
+com\comunidad\gestion\unit\QuorumServiceTest.class
+com\comunidad\gestion\unit\ComuneroServiceTest.class
+com\comunidad\gestion\unit\VotacionServiceTest.class

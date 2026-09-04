@@ -1,0 +1,346 @@
+<app-page-header
+  title="Padrón Oficial de Comuneros"
+  subtitle="Comunidad Campesina de La Encañada — Registro de comuneros calificados y no calificados"
+  icon="people">
+  <button mat-raised-button color="primary" (click)="abrirCrearModal()">
+    <mat-icon>person_add</mat-icon> Registrar Nuevo Comunero
+  </button>
+</app-page-header>
+
+<!-- BARRA DE FILTROS -->
+<mat-card class="filter-card">
+  <mat-card-content class="filter-content">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Buscar por DNI, Nombres o N° Padrón</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [(ngModel)]="busqueda" (keyup.enter)="buscar()" placeholder="Ej. 45892341 o PAD-005">
+    </mat-form-field>
+
+    <!-- FILTRO POR CASERÍO (LOS 5 CASERÍOS OFICIALES) -->
+    <mat-form-field appearance="outline">
+      <mat-label>Caserío</mat-label>
+      <mat-select [(ngModel)]="caserioFiltro" (selectionChange)="buscar()">
+        <mat-option value="">Todos los Caseríos</mat-option>
+        <mat-option *ngFor="let c of caserios" [value]="c">{{ c }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- FILTRO POR TIPO DE COMUNERO -->
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo Comunero</mat-label>
+      <mat-select [(ngModel)]="tipoFiltro" (selectionChange)="buscar()">
+        <mat-option value="">Todos los Tipos</mat-option>
+        <mat-option *ngFor="let t of tiposComunero" [value]="t">{{ t === 'CALIFICADO' ? 'CALIFICADO' : 'NO CALIFICADO' }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- FILTRO POR ESTADO -->
+    <mat-form-field appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select [(ngModel)]="estadoFiltro" (selectionChange)="buscar()">
+        <mat-option value="">Todos los Estados</mat-option>
+        <mat-option *ngFor="let e of estados" [value]="e">{{ e }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="filter-actions">
+      <button mat-flat-button color="primary" (click)="buscar()">
+        <mat-icon>filter_alt</mat-icon> Filtrar
+      </button>
+      <button mat-stroked-button (click)="limpiarFiltros()">
+        <mat-icon>restart_alt</mat-icon> Limpiar
+      </button>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+<!-- TABLA DEL PADRÓN CON LOS ATRIBUTOS EXACTOS -->
+<mat-card class="table-card">
+  <div class="loading-shade" *ngIf="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <div class="table-container">
+    <table mat-table [dataSource]="comuneros" class="w-100 main-table">
+
+      <!-- N° DE PADRÓN -->
+      <ng-container matColumnDef="numeroPadron">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">N° Padrón</th>
+        <td mat-cell *matCellDef="let element">
+          <strong>{{ element.numeroPadron || element.codigoComunero }}</strong>
+        </td>
+      </ng-container>
+
+      <!-- DNI -->
+      <ng-container matColumnDef="dni">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">DNI</th>
+        <td mat-cell *matCellDef="let element"><code>{{ element.dni }}</code></td>
+      </ng-container>
+
+      <!-- NOMBRE Y APELLIDOS -->
+      <ng-container matColumnDef="nombreCompleto">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Apellidos y Nombres</th>
+        <td mat-cell *matCellDef="let element"><strong>{{ element.nombreCompleto }}</strong></td>
+      </ng-container>
+
+      <!-- FECHA DE NACIMIENTO -->
+      <ng-container matColumnDef="fechaNacimiento">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Fec. Nacimiento</th>
+        <td mat-cell *matCellDef="let element">{{ element.fechaNacimiento || '-' }}</td>
+      </ng-container>
+
+      <!-- ESTADO CIVIL -->
+      <ng-container matColumnDef="estadoCivil">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Estado Civil</th>
+        <td mat-cell *matCellDef="let element">{{ element.estadoCivil || '-' }}</td>
+      </ng-container>
+
+      <!-- OCUPACIÓN -->
+      <ng-container matColumnDef="ocupacion">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Ocupación</th>
+        <td mat-cell *matCellDef="let element">{{ element.ocupacion || 'Agricultor' }}</td>
+      </ng-container>
+
+      <!-- TELÉFONO -->
+      <ng-container matColumnDef="telefono">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Teléfono</th>
+        <td mat-cell *matCellDef="let element">{{ element.telefono || '-' }}</td>
+      </ng-container>
+
+      <!-- TIPO DE COMUNERO (CALIFICADO / NO CALIFICADO) -->
+      <ng-container matColumnDef="tipoComunero">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Tipo</th>
+        <td mat-cell *matCellDef="let element">
+          <span class="badge" [ngClass]="element.tipoComunero === 'NO_CALIFICADO' ? 'badge-secondary' : 'badge-primary'">
+            {{ element.tipoComunero === 'NO_CALIFICADO' ? 'NO CALIFICADO' : 'CALIFICADO' }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- CASERÍO (LOS 5 CASERÍOS) -->
+      <ng-container matColumnDef="caserio">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Caserío</th>
+        <td mat-cell *matCellDef="let element">
+          <span class="badge-caserio">
+            <mat-icon>location_on</mat-icon> {{ element.caserio || element.sectorNombre || '-' }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- ESTADO -->
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Estado</th>
+        <td mat-cell *matCellDef="let element">
+          <span [class]="element.estado | estadoBadge">{{ element.estado }}</span>
+        </td>
+      </ng-container>
+
+      <!-- ACCIONES -->
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef class="table-header-cell">Acciones</th>
+        <td mat-cell *matCellDef="let element">
+          <div class="action-buttons">
+            <button mat-icon-button color="primary" (click)="verDetalle(element)" matTooltip="Ver Ficha">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button color="accent" (click)="abrirEditarModal(element)" matTooltip="Editar">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="eliminarComunero(element)" matTooltip="Dar de baja">
+              <mat-icon>person_remove</mat-icon>
+            </button>
+          </div>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns" class="table-header-row"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-data-row"></tr>
+
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell" colspan="11" style="text-align: center; padding: 32px;">
+          No se encontraron comuneros registrados con los filtros aplicados.
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <mat-paginator
+    [length]="totalElements"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[10, 20, 50]"
+    (page)="onPageChange($event)"
+    showFirstLastButtons>
+  </mat-paginator>
+</mat-card>
+
+<!-- ========================================================================= -->
+<!-- DIALOG: CREAR / EDITAR COMUNERO                                           -->
+<!-- ========================================================================= -->
+<ng-template #comuneroFormDialog>
+  <h2 mat-dialog-title>{{ isEditing ? 'Editar Comunero' : 'Registrar Comunero en el Padrón' }}</h2>
+  <mat-dialog-content>
+    <form [formGroup]="comuneroForm" class="dialog-form">
+
+      <!-- Fila 1: N° Padrón y DNI -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>N° de Padrón</mat-label>
+          <input matInput formControlName="numeroPadron" placeholder="Ej. PAD-036">
+          <mat-error *ngIf="comuneroForm.get('numeroPadron')?.hasError('required')">El N° de Padrón es obligatorio</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>DNI (8 dígitos)</mat-label>
+          <input matInput formControlName="dni" placeholder="Ej. 42345678" maxlength="8">
+          <mat-error *ngIf="comuneroForm.get('dni')?.hasError('required')">DNI obligatorio</mat-error>
+          <mat-error *ngIf="comuneroForm.get('dni')?.hasError('pattern')">Debe contener 8 dígitos</mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 2: Nombres y Apellidos -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Nombres</mat-label>
+          <input matInput formControlName="nombres" placeholder="Ej. Juan">
+          <mat-error *ngIf="comuneroForm.get('nombres')?.hasError('required')">Los nombres son obligatorios</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Apellidos</mat-label>
+          <input matInput formControlName="apellidos" placeholder="Ej. Quispe Huamán">
+          <mat-error *ngIf="comuneroForm.get('apellidos')?.hasError('required')">Los apellidos son obligatorios</mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 3: Fecha de Nacimiento y Estado Civil -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de Nacimiento</mat-label>
+          <input matInput type="date" formControlName="fechaNacimiento">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado Civil</mat-label>
+          <mat-select formControlName="estadoCivil">
+            <mat-option *ngFor="let ec of estadosCiviles" [value]="ec">{{ ec }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 4: Ocupación y Teléfono -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Ocupación</mat-label>
+          <input matInput formControlName="ocupacion" placeholder="Ej. Agricultor, Ganadero">
+          <mat-error *ngIf="comuneroForm.get('ocupacion')?.hasError('required')">Ocupación obligatoria</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Teléfono de Contacto</mat-label>
+          <input matInput formControlName="telefono" placeholder="Ej. 987654321">
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 5: Caserío al que pertenecen (Los 5 Caseríos) -->
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Caserío de Pertenencia</mat-label>
+          <mat-select formControlName="caserio">
+            <mat-option *ngFor="let c of caserios" [value]="c">
+              {{ c }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="comuneroForm.get('caserio')?.hasError('required')">El caserío es obligatorio</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de Comunero</mat-label>
+          <mat-select formControlName="tipoComunero">
+            <mat-option value="CALIFICADO">CALIFICADO (Con voz y voto)</mat-option>
+            <mat-option value="NO_CALIFICADO">NO CALIFICADO</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 6: Estado -->
+      <div class="form-row single">
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Estado en la Comunidad</mat-label>
+          <mat-select formControlName="estado">
+            <mat-option *ngFor="let est of estados" [value]="est">{{ est }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancelar</button>
+    <button mat-raised-button color="primary" (click)="guardarComunero()">
+      <mat-icon>save</mat-icon> {{ isEditing ? 'Guardar Cambios' : 'Registrar en Padrón' }}
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<!-- ========================================================================= -->
+<!-- DIALOG: FICHA DETALLADA DEL COMUNERO                                      -->
+<!-- ========================================================================= -->
+<ng-template #detalleDialog>
+  <h2 mat-dialog-title>Ficha Oficial del Comunero</h2>
+  <mat-dialog-content *ngIf="selectedComunero">
+    <div class="detail-box">
+      <div class="detail-header-info">
+        <h3>{{ selectedComunero.nombreCompleto }}</h3>
+        <p><strong>N° Padrón:</strong> {{ selectedComunero.numeroPadron || selectedComunero.codigoComunero }} &nbsp;|&nbsp; <strong>DNI:</strong> {{ selectedComunero.dni }}</p>
+      </div>
+
+      <div class="detail-grid">
+        <div class="d-item">
+          <span class="d-label">Caserío:</span>
+          <span class="d-val highlight-caserio"><mat-icon>location_on</mat-icon> {{ selectedComunero.caserio || selectedComunero.sectorNombre || '-' }}</span>
+        </div>
+
+        <div class="d-item">
+          <span class="d-label">Tipo Comunero:</span>
+          <span class="badge" [ngClass]="selectedComunero.tipoComunero === 'NO_CALIFICADO' ? 'badge-secondary' : 'badge-primary'">
+            {{ selectedComunero.tipoComunero === 'NO_CALIFICADO' ? 'NO CALIFICADO' : 'CALIFICADO' }}
+          </span>
+        </div>
+
+        <div class="d-item">
+          <span class="d-label">Estado:</span>
+          <span [class]="selectedComunero.estado | estadoBadge">{{ selectedComunero.estado }}</span>
+        </div>
+
+        <div class="d-item">
+          <span class="d-label">Estado Civil:</span>
+          <span class="d-val">{{ selectedComunero.estadoCivil || '-' }}</span>
+        </div>
+
+        <div class="d-item">
+          <span class="d-label">Ocupación:</span>
+          <span class="d-val">{{ selectedComunero.ocupacion || 'Agricultor' }}</span>
+        </div>
+
+        <div class="d-item">
+          <span class="d-label">Fec. Nacimiento:</span>
+          <span class="d-val">{{ selectedComunero.fechaNacimiento || '-' }}</span>
+        </div>
+
+        <div class="d-item">
+          <span class="d-label">Teléfono:</span>
+          <span class="d-val">{{ selectedComunero.telefono || '-' }}</span>
+        </div>
+
+        <div class="d-item" *ngIf="selectedComunero.totalDeudaPendiente !== undefined">
+          <span class="d-label">Deuda Multas:</span>
+          <span class="d-val text-danger">S/ {{ selectedComunero.totalDeudaPendiente }}</span>
+        </div>
+      </div>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-raised-button color="primary" mat-dialog-close>Cerrar</button>
+  </mat-dialog-actions>
+</ng-template>

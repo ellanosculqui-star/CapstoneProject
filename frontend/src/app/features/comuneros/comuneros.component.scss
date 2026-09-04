@@ -1,0 +1,201 @@
+.top-action-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+  .create-btn { font-weight: 600; }
+}
+
+.filter-card {
+  margin-bottom: 24px;
+  border-radius: 12px;
+
+  .filter-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+
+    .search-field {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    mat-form-field {
+      margin-bottom: -1.25em;
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+  }
+}
+
+.table-card {
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  height: 540px;
+
+  .main-table {
+    .table-header-row {
+      background-color: #1e293b !important;
+      border-bottom: 2px solid #334155 !important;
+      height: 52px;
+    }
+
+    .table-header-cell {
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 0.85rem !important;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .table-data-row {
+      &:hover {
+        background-color: #f1f5f9;
+      }
+    }
+  }
+
+  .badge-caserio {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .loading-shade {
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.table-container {
+  height: 470px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+
+    &.single {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  mat-form-field {
+    margin-bottom: -0.8em;
+  }
+}
+
+.detail-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .detail-header-info {
+    text-align: center;
+    background: #f8fafc;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+
+    h3 {
+      margin: 0 0 4px;
+      color: #0f172a;
+      font-size: 1.2rem;
+    }
+    p {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+
+    .d-item {
+      display: flex;
+      flex-direction: column;
+      background: #fafafa;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #f1f5f9;
+
+      .d-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+
+      .d-val {
+        font-size: 0.9rem;
+        color: #1e293b;
+        font-weight: 500;
+
+        &.highlight-caserio {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          color: #2563eb;
+          font-weight: 700;
+          mat-icon { font-size: 16px; width: 16px; height: 16px; }
+        }
+
+        &.text-danger {
+          color: #dc2626;
+          font-weight: 700;
+        }
+      }
+    }
+  }
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+::ng-deep .mat-mdc-row:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+::ng-deep .mat-mdc-row:nth-child(even) {
+  background-color: #f8fafc;
+}

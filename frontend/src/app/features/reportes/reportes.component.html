@@ -1,0 +1,102 @@
+<app-page-header
+  title="Reportes Generales y Exportación"
+  subtitle="Consolidados de padrón, asistencias, multas y caudales comunales para impresión"
+  icon="assessment">
+</app-page-header>
+
+<div class="print-actions">
+  <button mat-raised-button color="primary" (click)="imprimir()">
+    <mat-icon>print</mat-icon> Imprimir / Guardar PDF
+  </button>
+  <button mat-stroked-button color="accent" (click)="exportarCSV('padron')" style="margin-left: 8px;">
+    <mat-icon>download</mat-icon> Exportar CSV (Padrón)
+  </button>
+</div>
+
+<mat-card class="tab-card">
+  <mat-tab-group (selectedTabChange)="loading = false">
+    <!-- Tab Padrón -->
+    <mat-tab label="Reporte de Padrón">
+      <div class="tab-content">
+        <table mat-table [dataSource]="padronData" class="w-100">
+          <ng-container matColumnDef="codigoComunero">
+            <th mat-header-cell *matHeader-cellDef>Código</th>
+            <td mat-cell *matCellDef="let row">{{ row.codigoComunero }}</td>
+          </ng-container>
+          <ng-container matColumnDef="dni">
+            <th mat-header-cell *matHeader-cellDef>DNI</th>
+            <td mat-cell *matCellDef="let row">{{ row.dni }}</td>
+          </ng-container>
+          <ng-container matColumnDef="nombreCompleto">
+            <th mat-header-cell *matHeader-cellDef>Nombres y Apellidos</th>
+            <td mat-cell *matCellDef="let row">{{ row.nombreCompleto }}</td>
+          </ng-container>
+          <ng-container matColumnDef="condicionHabilitacion">
+            <th mat-header-cell *matHeader-cellDef>Condición</th>
+            <td mat-cell *matCellDef="let row">{{ row.condicionHabilitacion }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeader-rowDef="['codigoComunero', 'dni', 'nombreCompleto', 'condicionHabilitacion']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['codigoComunero', 'dni', 'nombreCompleto', 'condicionHabilitacion'];"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- Tab Multas -->
+    <mat-tab label="Reporte de Multas">
+      <div class="tab-content">
+        <button mat-stroked-button (click)="cargarReporteMultas()" class="mb-3">
+          <mat-icon>refresh</mat-icon> Cargar Datos de Multas
+        </button>
+        <table mat-table [dataSource]="multasData" class="w-100">
+          <ng-container matColumnDef="comuneroNombreCompleto">
+            <th mat-header-cell *matHeader-cellDef>Comunero</th>
+            <td mat-cell *matCellDef="let row">{{ row.comuneroNombreCompleto }}</td>
+          </ng-container>
+          <ng-container matColumnDef="asambleaTitulo">
+            <th mat-header-cell *matHeader-cellDef>Asamblea</th>
+            <td mat-cell *matCellDef="let row">{{ row.asambleaTitulo }}</td>
+          </ng-container>
+          <ng-container matColumnDef="montoOriginal">
+            <th mat-header-cell *matHeader-cellDef>Monto Original</th>
+            <td mat-cell *matCellDef="let row">{{ row.montoOriginal | soles }}</td>
+          </ng-container>
+          <ng-container matColumnDef="saldoPendiente">
+            <th mat-header-cell *matHeader-cellDef>Saldo Pendiente</th>
+            <td mat-cell *matCellDef="let row">{{ row.saldoPendiente | soles }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeader-rowDef="['comuneroNombreCompleto', 'asambleaTitulo', 'montoOriginal', 'saldoPendiente']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['comuneroNombreCompleto', 'asambleaTitulo', 'montoOriginal', 'saldoPendiente'];"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- Tab Pagos -->
+    <mat-tab label="Reporte de Recaudación">
+      <div class="tab-content">
+        <button mat-stroked-button (click)="cargarReportePagos()" class="mb-3">
+          <mat-icon>refresh</mat-icon> Cargar Historial de Pagos
+        </button>
+        <table mat-table [dataSource]="pagosData" class="w-100">
+          <ng-container matColumnDef="numeroRecibo">
+            <th mat-header-cell *matHeader-cellDef>Recibo N°</th>
+            <td mat-cell *matCellDef="let row">{{ row.numeroRecibo }}</td>
+          </ng-container>
+          <ng-container matColumnDef="comuneroNombreCompleto">
+            <th mat-header-cell *matHeader-cellDef>Comunero</th>
+            <td mat-cell *matCellDef="let row">{{ row.comuneroNombreCompleto }}</td>
+          </ng-container>
+          <ng-container matColumnDef="montoPagado">
+            <th mat-header-cell *matHeader-cellDef>Monto Pagado</th>
+            <td mat-cell *matCellDef="let row">{{ row.montoPagado | soles }}</td>
+          </ng-container>
+          <ng-container matColumnDef="fechaPago">
+            <th mat-header-cell *matHeader-cellDef>Fecha Pago</th>
+            <td mat-cell *matCellDef="let row">{{ row.fechaPago }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeader-rowDef="['numeroRecibo', 'comuneroNombreCompleto', 'montoPagado', 'fechaPago']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['numeroRecibo', 'comuneroNombreCompleto', 'montoPagado', 'fechaPago'];"></tr>
+        </table>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</mat-card>

@@ -1,0 +1,379 @@
+<app-page-header
+  title="Votaciones y Acuerdos Comunales"
+  subtitle="Sistema digital de escrutinio en vivo y toma de decisiones transparentes para La Encañada"
+  icon="how_to_vote">
+</app-page-header>
+
+<!-- Selector de Asamblea y Control Superior -->
+<mat-card class="filter-card">
+  <mat-card-content class="filter-content">
+    <div class="asamblea-selector">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Seleccionar Asamblea Comunitaria</mat-label>
+        <mat-select [(ngModel)]="selectedAsambleaId" (selectionChange)="onAsambleaChange()">
+          <mat-option *ngFor="let a of asambleas" [value]="a.id">
+            🏛️ {{ a.titulo }} ({{ a.fecha }}) — {{ a.tipo || 'General' }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="action-buttons">
+      <button mat-raised-button color="primary" class="btn-nueva-propuesta" (click)="abrirCrearModal()">
+        <mat-icon>add_task</mat-icon> Nueva Propuesta a Voto
+      </button>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+<!-- Resumen de Métricas de Votación -->
+<div class="stats-grid" *ngIf="selectedAsambleaId">
+  <div class="stat-card blue">
+    <div class="stat-icon"><mat-icon>how_to_vote</mat-icon></div>
+    <div class="stat-info">
+      <span class="stat-label">Total Propuestas</span>
+      <span class="stat-value">{{ totalVotacionesGlobal }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card green">
+    <div class="stat-icon"><mat-icon>play_circle</mat-icon></div>
+    <div class="stat-info">
+      <span class="stat-label">Votaciones Activas</span>
+      <span class="stat-value">{{ votacionesEnCursoCount }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card purple">
+    <div class="stat-icon"><mat-icon>verified</mat-icon></div>
+    <div class="stat-info">
+      <span class="stat-label">Acuerdos Aprobados</span>
+      <span class="stat-value">{{ votacionesAprobadasCount }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card orange">
+    <div class="stat-icon"><mat-icon>groups</mat-icon></div>
+    <div class="stat-info">
+      <span class="stat-label">Comuneros Presentes</span>
+      <span class="stat-value">{{ comunerosPresentes.length }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Carga en progreso -->
+<div class="loading-container" *ngIf="loading">
+  <mat-spinner diameter="48"></mat-spinner>
+  <p>Cargando propuestas de votación y padrón de asistentes...</p>
+</div>
+
+<!-- Sin Votaciones Registradas -->
+<div class="empty-state" *ngIf="!loading && votaciones.length === 0">
+  <mat-icon>inbox</mat-icon>
+  <h3>No hay propuestas de votación en esta asamblea</h3>
+  <p>Registre una nueva moción o propuesta para abrir el proceso de votación entre los comuneros calificados.</p>
+  <button mat-raised-button color="primary" (click)="abrirCrearModal()">
+    <mat-icon>add</mat-icon> Crear Primera Propuesta
+  </button>
+</div>
+
+<!-- Tarjetas de Votaciones -->
+<div class="votaciones-grid" *ngIf="!loading && votaciones.length > 0">
+  <mat-card class="votacion-card" *ngFor="let v of votaciones">
+    <mat-card-header>
+      <div class="card-header-top">
+        <mat-chip-set>
+          <mat-chip class="tipo-chip">{{ formatTipo(v.tipo) }}</mat-chip>
+          <span [class]="v.estado | estadoBadge">{{ v.estado }}</span>
+        </mat-chip-set>
+
+        <!-- Badge de Resultado Final -->
+        <span class="decision-badge" *ngIf="v.resultado?.resultadoDecision" [ngClass]="{
+          'aprobada': v.resultado?.resultadoDecision === 'APROBADA',
+          'rechazada': v.resultado?.resultadoDecision === 'RECHAZADA',
+          'empate': v.resultado?.resultadoDecision === 'EMPATE'
+        }">
+          <mat-icon *ngIf="v.resultado?.resultadoDecision === 'APROBADA'">check_circle</mat-icon>
+          <mat-icon *ngIf="v.resultado?.resultadoDecision === 'RECHAZADA'">cancel</mat-icon>
+          <mat-icon *ngIf="v.resultado?.resultadoDecision === 'EMPATE'">balance</mat-icon>
+          {{ v.resultado?.resultadoDecision }}
+        </span>
+      </div>
+
+      <mat-card-title class="card-title">{{ v.titulo }}</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="propuesta-box" *ngIf="v.propuesta">
+        <strong>Moción:</strong> {{ v.propuesta }}
+      </div>
+
+      <p class="desc" *ngIf="v.descripcion">{{ v.descripcion }}</p>
+
+      <mat-divider></mat-divider>
+
+      <!-- Panel Escrutinio y Resultados -->
+      <div class="results-box">
+        <div class="votos-total-head">
+          <span>Escrutinio Digital</span>
+          <span class="total-badge">{{ getTotalVotos(v) }} votos emitidos</span>
+        </div>
+
+        <div class="option-result favor">
+          <div class="result-header">
+            <span>🟢 A FAVOR ({{ getVotosAFavor(v) }})</span>
+            <strong>{{ pctAFavor(v) }}%</strong>
+          </div>
+          <mat-progress-bar mode="determinate" [value]="pctAFavor(v)"></mat-progress-bar>
+        </div>
+
+        <div class="option-result contra">
+          <div class="result-header">
+            <span>🔴 EN CONTRA ({{ getVotosEnContra(v) }})</span>
+            <strong>{{ pctEnContra(v) }}%</strong>
+          </div>
+          <mat-progress-bar mode="determinate" [value]="pctEnContra(v)"></mat-progress-bar>
+        </div>
+
+        <div class="option-result abstencion">
+          <div class="result-header">
+            <span>⚪ ABSTENCIÓN ({{ getVotosAbstencion(v) }})</span>
+            <strong>{{ pctAbstencion(v) }}%</strong>
+          </div>
+          <mat-progress-bar mode="determinate" [value]="pctAbstencion(v)"></mat-progress-bar>
+        </div>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions class="card-actions">
+      <!-- Botón Abrir Votación -->
+      <button mat-raised-button color="primary" *ngIf="v.estado === 'BORRADOR'" (click)="abrirVotacion(v.id)">
+        <mat-icon>play_arrow</mat-icon> Abrir Votación
+      </button>
+
+      <!-- Botón Emitir Voto Comunero -->
+      <button mat-raised-button class="btn-votar" *ngIf="v.estado === 'ABIERTA'" (click)="abrirModalVotar(v)">
+        <mat-icon>how_to_vote</mat-icon> Registrar Voto
+      </button>
+
+      <!-- Botón Cerrar y Computar -->
+      <button mat-raised-button color="warn" *ngIf="v.estado === 'ABIERTA'" (click)="cerrarVotacion(v.id)">
+        <mat-icon>stop</mat-icon> Cerrar Escrutinio
+      </button>
+
+      <!-- Botón Ver Acta -->
+      <button mat-stroked-button color="accent" *ngIf="v.estado === 'CERRADA' || getTotalVotos(v) > 0" (click)="abrirActaModal(v)">
+        <mat-icon>description</mat-icon> Ver Acta Oficial
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 1: CREAR NUEVA PROPUESTA DE VOTACIÓN -->
+<!-- ========================================== -->
+<ng-template #crearModal>
+  <h2 mat-dialog-title class="dialog-header">
+    <mat-icon>how_to_vote</mat-icon> Registrar Nueva Propuesta de Votación
+  </h2>
+
+  <mat-dialog-content [formGroup]="votacionForm" class="dialog-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Título de la Propuesta / Moción</mat-label>
+      <input matInput formControlName="titulo" placeholder="Ej: Aprobación del Presupuesto de Canal de Riego">
+      <mat-error *ngIf="votacionForm.get('titulo')?.hasError('required')">El título es obligatorio</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Propuesta Específica Sometida a Voto</mat-label>
+      <textarea matInput formControlName="propuesta" rows="3" placeholder="Redacte el acuerdo o resolución que será votado por los comuneros..."></textarea>
+      <mat-error *ngIf="votacionForm.get('propuesta')?.hasError('required')">La propuesta es obligatoria</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Descripción / Contexto Adicional (Opcional)</mat-label>
+      <textarea matInput formControlName="descripcion" rows="2" placeholder="Antecedentes, justificación técnica o legal..."></textarea>
+    </mat-form-field>
+
+    <div class="tipo-votacion-group">
+      <label class="tipo-label">Regla de Mayoría Exigida:</label>
+      <mat-radio-group formControlName="tipo" class="radio-vertical">
+        <mat-radio-button value="MAYORIA_SIMPLE">
+          <strong>Mayoría Simple</strong> (Más del 50% de los votos emitidos)
+        </mat-radio-button>
+        <mat-radio-button value="MAYORIA_CALIFICADA">
+          <strong>Mayoría Calificada</strong> (Mínimo 2/3 de los votos emitidos)
+        </mat-radio-button>
+        <mat-radio-button value="UNANIMIDAD">
+          <strong>Unanimidad</strong> (100% de aprobación sin votos en contra)
+        </mat-radio-button>
+      </mat-radio-group>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancelar</button>
+    <button mat-raised-button color="primary" (click)="guardarVotacion()" [disabled]="votacionForm.invalid">
+      <mat-icon>check</mat-icon> Registrar Votación
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<!-- ========================================== -->
+<!-- MODAL 2: EMITIR VOTO DE COMUNERO PRESENTE   -->
+<!-- ========================================== -->
+<ng-template #votarModal>
+  <h2 mat-dialog-title class="dialog-header green-header">
+    <mat-icon>how_to_vote</mat-icon> Emisión de Voto Comunero
+  </h2>
+
+  <mat-dialog-content class="dialog-votar-content">
+    <div class="votar-info-card" *ngIf="votacionSeleccionada">
+      <h4>{{ votacionSeleccionada.titulo }}</h4>
+      <p class="propuesta-preview">"{{ votacionSeleccionada.propuesta || votacionSeleccionada.descripcion }}"</p>
+    </div>
+
+    <div class="voter-selection">
+      <div class="empty-voters-alert" *ngIf="comunerosPresentes.length === 0">
+        <mat-icon>warning</mat-icon>
+        <div>
+          <strong>No hay comuneros registrados como PRESENTES</strong>
+          <p>Solamente los comuneros con asistencia marcada como <strong>PRESENTE</strong> en esta asamblea están habilitados para sufragio.</p>
+        </div>
+        <button mat-raised-button color="accent" (click)="irAAsistencia()">
+          <mat-icon>how_to_reg</mat-icon> Ir a Control de Asistencia
+        </button>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width" *ngIf="comunerosPresentes.length > 0">
+        <mat-label>Seleccionar Comunero Presente habilitado</mat-label>
+        <mat-select [(ngModel)]="comuneroSeleccionadoId">
+          <mat-option *ngFor="let c of comunerosPresentes" [value]="c.comuneroId">
+            👤 {{ c.nombreCompleto }} (DNI: {{ c.dni }}) — {{ c.sectorNombre || 'Comunero' }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="opciones-voto-grid">
+      <div class="voto-option favor" [class.selected]="opcionVotoSeleccionada === 'A_FAVOR'" (click)="opcionVotoSeleccionada = 'A_FAVOR'">
+        <mat-icon>thumb_up</mat-icon>
+        <span>A FAVOR</span>
+      </div>
+
+      <div class="voto-option contra" [class.selected]="opcionVotoSeleccionada === 'EN_CONTRA'" (click)="opcionVotoSeleccionada = 'EN_CONTRA'">
+        <mat-icon>thumb_down</mat-icon>
+        <span>EN CONTRA</span>
+      </div>
+
+      <div class="voto-option abstencion" [class.selected]="opcionVotoSeleccionada === 'ABSTENCION'" (click)="opcionVotoSeleccionada = 'ABSTENCION'">
+        <mat-icon>remove_circle_outline</mat-icon>
+        <span>ABSTENCIÓN</span>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancelar</button>
+    <button mat-raised-button color="primary" (click)="confirmarEmitirVoto()" [disabled]="!comuneroSeleccionadoId">
+      <mat-icon>how_to_vote</mat-icon> Registrar Voto
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<!-- ========================================== -->
+<!-- MODAL 3: CERTIFICADO Y ACTA DE ACUERDO     -->
+<!-- ========================================== -->
+<ng-template #actaModal>
+  <div class="acta-container" *ngIf="votacionActa">
+    <div class="acta-header">
+      <div class="acta-seal">
+        <mat-icon>verified_user</mat-icon>
+      </div>
+      <h2>COMUNIDAD CAMPESINA DE LA ENCAÑADA</h2>
+      <h3>Distrito de La Encañada — Provincia y Departamento de Cajamarca</h3>
+      <p class="acta-sub">Acta Oficial de Escrutinio y Certificación de Votación</p>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="acta-body">
+      <div class="acta-row">
+        <strong>Asamblea:</strong> {{ votacionActa.asambleaTitulo }}
+      </div>
+      <div class="acta-row">
+        <strong>Asunto / Moción:</strong> {{ votacionActa.titulo }}
+      </div>
+      <div class="acta-row" *ngIf="votacionActa.propuesta">
+        <strong>Texto del Acuerdo:</strong> {{ votacionActa.propuesta }}
+      </div>
+      <div class="acta-row">
+        <strong>Regla de Mayoría Exigida:</strong> {{ formatTipo(votacionActa.tipo) }}
+      </div>
+
+      <div class="acta-table-box">
+        <h4>Escrutinio Oficial de Sufragios</h4>
+        <table class="acta-table">
+          <thead>
+            <tr>
+              <th>Opción</th>
+              <th>Conteo Votos</th>
+              <th>Porcentaje</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>🟢 A Favor</td>
+              <td><strong>{{ getVotosAFavor(votacionActa) }}</strong></td>
+              <td>{{ pctAFavor(votacionActa) }}%</td>
+            </tr>
+            <tr>
+              <td>🔴 En Contra</td>
+              <td><strong>{{ getVotosEnContra(votacionActa) }}</strong></td>
+              <td>{{ pctEnContra(votacionActa) }}%</td>
+            </tr>
+            <tr>
+              <td>⚪ Abstención</td>
+              <td><strong>{{ getVotosAbstencion(votacionActa) }}</strong></td>
+              <td>{{ pctAbstencion(votacionActa) }}%</td>
+            </tr>
+            <tr class="total-row">
+              <td>Total Sufragios Emitidos</td>
+              <td><strong>{{ getTotalVotos(votacionActa) }}</strong></td>
+              <td>100%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="acta-dictamen" [ngClass]="{
+        'aprobado': votacionActa.resultado?.resultadoDecision === 'APROBADA',
+        'rechazado': votacionActa.resultado?.resultadoDecision === 'RECHAZADA'
+      }">
+        <h4>DICTAMEN FINAL DEL ESCRUTINIO:</h4>
+        <span class="dictamen-value">
+          {{ votacionActa.resultado?.resultadoDecision || 'PROCESO CERRADO' }}
+        </span>
+      </div>
+
+      <div class="acta-signatures">
+        <div class="signature-line">
+          <span>_______________________</span>
+          <p>Presidente Comunal</p>
+        </div>
+        <div class="signature-line">
+          <span>_______________________</span>
+          <p>Secretario de Actas</p>
+        </div>
+      </div>
+    </div>
+
+    <mat-dialog-actions align="end" class="no-print">
+      <button mat-button mat-dialog-close>Cerrar</button>
+      <button mat-raised-button color="primary" (click)="imprimirActa()">
+        <mat-icon>print</mat-icon> Imprimir Acta
+      </button>
+    </mat-dialog-actions>
+  </div>
+</ng-template>
+

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/features/multas/multas.component.scss"],
+  "sourcesContent": [".resumen-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));\n  gap: 20px;\n  margin-bottom: 24px;\n\n  .resumen-card {\n    border-radius: 12px;\n    .label { font-size: 0.85rem; color: #64748b; font-weight: 600; }\n    h2 { font-size: 1.8rem; font-weight: 700; margin: 4px 0; color: #1e293b; }\n    p { font-size: 0.8rem; color: #94a3b8; margin: 0; }\n\n    &.success h2 { color: #16a34a; }\n    &.danger h2 { color: #dc2626; }\n  }\n}\n\n.filter-card {\n  margin-bottom: 24px;\n  border-radius: 12px;\n  mat-form-field { margin-bottom: -1.25em; }\n}\n\n.table-card {\n  border-radius: 12px;\n  position: relative;\n  .danger-text { color: #dc2626; }\n}\n"],
+  "mappings": ";AAAA,CAAA;AACE,WAAA;AACA,yBAAA,OAAA,QAAA,EAAA,OAAA,KAAA,EAAA;AACA,OAAA;AACA,iBAAA;;AAEA,CANF,aAME,CAAA;AACE,iBAAA;;AACA,CARJ,aAQI,CAFF,aAEE,CAAA;AAAS,aAAA;AAAoB,SAAA;AAAgB,eAAA;;AAC7C,CATJ,aASI,CAHF,aAGE;AAAK,aAAA;AAAmB,eAAA;AAAkB,UAAA,IAAA;AAAe,SAAA;;AACzD,CAVJ,aAUI,CAJF,aAIE;AAAI,aAAA;AAAmB,SAAA;AAAgB,UAAA;;AAEvC,CAZJ,aAYI,CANF,YAME,CAAA,QAAA;AAAe,SAAA;;AACf,CAbJ,aAaI,CAPF,YAOE,CAAA,OAAA;AAAc,SAAA;;AAIlB,CAAA;AACE,iBAAA;AACA,iBAAA;;AACA,CAHF,YAGE;AAAiB,iBAAA;;AAGnB,CAAA;AACE,iBAAA;AACA,YAAA;;AACA,CAHF,WAGE,CAAA;AAAe,SAAA;;",
+  "names": []
+}

@@ -1,0 +1,272 @@
+<app-page-header
+  title="Mapa Territorial y Gestión de Caseríos"
+  subtitle="Comunidad Campesina de La Encañada — Delimitación de los 5 caseríos oficiales y analítica comunitaria"
+  icon="map">
+  <button mat-raised-button color="primary" (click)="abrirCrearModal()">
+    <mat-icon>add_location_alt</mat-icon> Nuevo Caserío
+  </button>
+</app-page-header>
+
+<!-- SUMMARY KPIS -->
+<div class="kpi-grid mb-24">
+  <div class="kpi-card">
+    <mat-icon class="kpi-icon color-blue">location_city</mat-icon>
+    <div class="kpi-info">
+      <span class="kpi-val">5</span>
+      <span class="kpi-label">Caseríos Delimitados</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <mat-icon class="kpi-icon color-green">groups</mat-icon>
+    <div class="kpi-info">
+      <span class="kpi-val">{{ totalComunerosGlobal }}</span>
+      <span class="kpi-label">Comuneros en Padrón</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <mat-icon class="kpi-icon color-amber">how_to_reg</mat-icon>
+    <div class="kpi-info">
+      <span class="kpi-val">{{ asistenciaPromedioGlobal }}%</span>
+      <span class="kpi-label">Asistencia Promedio Comunal</span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <mat-icon class="kpi-icon color-purple">star</mat-icon>
+    <div class="kpi-info">
+      <span class="kpi-val">{{ caserioLider.nombre }}</span>
+      <span class="kpi-label">Líder en Participación ({{ caserioLider.asistenciaPct }}%)</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN MAP & ANALYTICS SPLIT VIEW -->
+<div class="territorial-split-container mb-24">
+
+  <!-- MAPA VECTORIAL INTERACTIVO DE LOS 5 CASERÍOS -->
+  <mat-card class="map-card">
+    <mat-card-header>
+      <mat-icon matCardAvatar class="card-icon">map</mat-icon>
+      <mat-card-title>Mapa Territorial Delimitado por Caseríos</mat-card-title>
+      <mat-card-subtitle>Haga clic en una zona del mapa para inspeccionar sus métricas comunales</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content class="map-content">
+      <div class="svg-map-wrapper">
+        <svg viewBox="0 0 580 320" class="territorial-svg-map">
+          <!-- Fondo territorial de La Encañada -->
+          <rect x="0" y="0" width="580" height="320" rx="14" fill="#0f172a" class="bg-rect"></rect>
+          <path d="M 20,20 Q 300,10 560,20 Q 570,160 560,300 Q 280,310 20,300 Q 10,160 20,20 Z" fill="#1e293b" opacity="0.5" stroke="#334155" stroke-dasharray="4,4"></path>
+
+          <!-- Polígonos de las 5 Zonas/Caseríos -->
+          <g *ngFor="let z of caseriosZonas"
+             class="map-zone"
+             [class.active]="caserioSeleccionado?.id === z.id"
+             (click)="seleccionarCaserio(z)">
+            
+            <polygon [attr.points]="z.coordenadasSvg"
+                     [attr.fill]="z.color"
+                     fill-opacity="0.35"
+                     [attr.stroke]="z.color"
+                     stroke-width="3"
+                     stroke-linejoin="round"
+                     class="zone-polygon">
+            </polygon>
+
+            <!-- Marcador y etiqueta del Caserío en el Mapa -->
+            <g [attr.transform]="'translate(' + z.markerPos.x + ',' + z.markerPos.y + ')'" class="map-marker-group">
+              <circle r="16" [attr.fill]="z.color" stroke="#ffffff" stroke-width="2" class="marker-circle"></circle>
+              <text y="4" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">{{ z.totalComuneros }}</text>
+              <rect x="-45" y="20" width="90" height="20" rx="6" fill="#0f172a" fill-opacity="0.85" stroke="#334155"></rect>
+              <text y="34" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">{{ z.nombre }}</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <!-- LEYENDA MAPA -->
+      <div class="map-legend">
+        <div class="legend-item"
+             *ngFor="let z of caseriosZonas"
+             [class.active]="caserioSeleccionado?.id === z.id"
+             (click)="seleccionarCaserio(z)">
+          <span class="legend-dot" [style.background]="z.color"></span>
+          <span class="legend-name">{{ z.nombre }}</span>
+          <span class="legend-count">{{ z.totalComuneros }} hab.</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- FICHA ANALÍTICA DEL CASERÍO SELECCIONADO -->
+  <mat-card class="detail-card" *ngIf="caserioSeleccionado">
+    <mat-card-header [style.border-left-color]="caserioSeleccionado.color" class="detail-card-header">
+      <div matCardAvatar class="caserio-avatar" [style.background]="caserioSeleccionado.color">
+        <mat-icon>location_on</mat-icon>
+      </div>
+      <mat-card-title>Ficha Técnica: {{ caserioSeleccionado.nombre }}</mat-card-title>
+      <mat-card-subtitle>{{ caserioSeleccionado.descripcion }}</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content class="detail-content">
+      
+      <!-- METRICAS DE ASISTENCIA Y QUÓRUM -->
+      <div class="caserio-stats-box mb-20">
+        <div class="stat-row">
+          <div class="s-item">
+            <span class="s-label">Padrón Registrado</span>
+            <span class="s-val">{{ caserioSeleccionado.totalComuneros }} comuneros</span>
+          </div>
+
+          <div class="s-item">
+            <span class="s-label">Comuneros Calificados</span>
+            <span class="s-val text-success">{{ caserioSeleccionado.calificados }} ({{ Math.round((caserioSeleccionado.calificados / caserioSeleccionado.totalComuneros)*100) }}%)</span>
+          </div>
+        </div>
+
+        <!-- BARRA DE PARTICIPACIÓN / ASISTENCIA PROMEDIO DE ESTE CASERÍO -->
+        <div class="progress-section">
+          <div class="p-header">
+            <span>Asistencia Promedio a Asambleas</span>
+            <strong>{{ caserioSeleccionado.asistenciaPct }}%</strong>
+          </div>
+          <mat-progress-bar
+            mode="determinate"
+            [value]="caserioSeleccionado.asistenciaPct"
+            [color]="caserioSeleccionado.asistenciaPct >= 75 ? 'primary' : 'accent'">
+          </mat-progress-bar>
+        </div>
+      </div>
+
+      <!-- DETALLES DE COORDINACIÓN Y ZONA -->
+      <div class="info-list">
+        <div class="info-item">
+          <mat-icon>person</mat-icon>
+          <div>
+            <strong>Coordinador de Sector:</strong>
+            <p>{{ caserioSeleccionado.coordinador }}</p>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <mat-icon>terrain</mat-icon>
+          <div>
+            <strong>Ubicación Territorial:</strong>
+            <p>Comunidad Campesina de La Encañada, Cajamarca</p>
+          </div>
+        </div>
+
+        <div class="info-item">
+          <mat-icon>how_to_vote</mat-icon>
+          <div>
+            <strong>Voto en Asambleas:</strong>
+            <p>Representación activa con {{ caserioSeleccionado.calificados }} comuneros calificados con voz y voto.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPARATIVA GRÁFICA DE TODOS LOS CASERÍOS -->
+      <div class="chart-bars-box">
+        <span class="chart-title"><mat-icon>bar_chart</mat-icon> Comparativa de Participación por Caserío</span>
+        <div class="bar-chart-list">
+          <div class="chart-bar-item" *ngFor="let z of caseriosZonas">
+            <span class="bar-name">{{ z.nombre }}</span>
+            <div class="bar-track">
+              <div class="bar-fill" [style.width.%]="z.asistenciaPct" [style.background]="z.color"></div>
+            </div>
+            <span class="bar-val">{{ z.asistenciaPct }}%</span>
+          </div>
+        </div>
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>
+
+<!-- TABLA DE CASERÍOS Y SECTORES CON ACCIONES CRUD -->
+<mat-card class="table-card">
+  <mat-card-header>
+    <mat-icon matCardAvatar class="card-icon">list_alt</mat-icon>
+    <mat-card-title>Listado de Sectores y Caseríos</mat-card-title>
+    <mat-card-subtitle>Registro administrativo oficial de la comunidad</mat-card-subtitle>
+  </mat-card-header>
+
+  <div class="loading-shade" *ngIf="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <table mat-table [dataSource]="caseriosZonas" class="w-100 main-table">
+    
+    <ng-container matColumnDef="zona">
+      <th mat-header-cell *matHeaderCellDef>Zona</th>
+      <td mat-cell *matCellDef="let element">
+        <span class="color-dot-badge" [style.background]="element.color"></span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="nombre">
+      <th mat-header-cell *matHeaderCellDef>Nombre del Caserío</th>
+      <td mat-cell *matCellDef="let element"><strong>{{ element.nombre }}</strong></td>
+    </ng-container>
+
+    <ng-container matColumnDef="descripcion">
+      <th mat-header-cell *matHeaderCellDef>Descripción / Actividad</th>
+      <td mat-cell *matCellDef="let element">{{ element.descripcion }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="totalComuneros">
+      <th mat-header-cell *matHeaderCellDef>Comuneros Totales</th>
+      <td mat-cell *matCellDef="let element"><strong>{{ element.totalComuneros }}</strong></td>
+    </ng-container>
+
+    <ng-container matColumnDef="calificados">
+      <th mat-header-cell *matHeaderCellDef>Calificados</th>
+      <td mat-cell *matCellDef="let element"><span class="badge badge-success">{{ element.calificados }}</span></td>
+    </ng-container>
+
+    <ng-container matColumnDef="asistenciaPct">
+      <th mat-header-cell *matHeaderCellDef>Asistencia Prom.</th>
+      <td mat-cell *matCellDef="let element"><strong>{{ element.asistenciaPct }}%</strong></td>
+    </ng-container>
+
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeaderCellDef>Acciones</th>
+      <td mat-cell *matCellDef="let element">
+        <button mat-icon-button color="primary" (click)="seleccionarCaserio(element)" matTooltip="Ver en Mapa">
+          <mat-icon>place</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="seleccionarCaserio(row)" class="clickable-row"></tr>
+  </table>
+</mat-card>
+
+<!-- MODAL REGISTRAR/EDITAR CASERÍO -->
+<ng-template #sectorFormDialog>
+  <h2 mat-dialog-title>{{ isEditing ? 'Editar Caserío' : 'Registrar Nuevo Caserío' }}</h2>
+  <mat-dialog-content>
+    <form [formGroup]="sectorForm" class="dialog-form">
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Nombre del Caserío</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej. Sogorón Alto">
+        <mat-error *ngIf="sectorForm.get('nombre')?.hasError('required')">Nombre obligatorio</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Descripción / Vocación Productiva</mat-label>
+        <textarea matInput formControlName="descripcion" rows="3" placeholder="Ej. Zona alta ganadera y de pastizales"></textarea>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancelar</button>
+    <button mat-raised-button color="primary" (click)="guardarSector()">
+      <mat-icon>save</mat-icon> {{ isEditing ? 'Guardar Cambios' : 'Registrar' }}
+    </button>
+  </mat-dialog-actions>
+</ng-template>

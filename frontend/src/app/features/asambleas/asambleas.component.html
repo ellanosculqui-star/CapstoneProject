@@ -1,0 +1,181 @@
+<app-page-header
+  title="Gestión de Asambleas"
+  subtitle="Convocatoria, control de estados y actas de asambleas comunales"
+  icon="gavel">
+</app-page-header>
+
+<div class="top-action-bar">
+  <button mat-raised-button color="primary" class="create-btn" (click)="abrirCrearModal()">
+    <mat-icon>add_circle</mat-icon> Convocar Nueva Asamblea
+  </button>
+</div>
+
+<mat-card class="filter-card">
+  <mat-card-content class="filter-content">
+    <mat-form-field appearance="outline">
+      <mat-label>Filtrar por Estado</mat-label>
+      <mat-select [(ngModel)]="estadoFiltro" (selectionChange)="onFiltrar()">
+        <mat-option value="">Todas</mat-option>
+        <mat-option value="PROGRAMADA">Programadas</mat-option>
+        <mat-option value="EN_CURSO">En Curso</mat-option>
+        <mat-option value="FINALIZADA">Finalizadas</mat-option>
+        <mat-option value="CANCELADA">Canceladas</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </mat-card-content>
+</mat-card>
+
+<mat-card class="table-card">
+  <div class="loading-shade" *ngIf="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <table mat-table [dataSource]="asambleas" class="w-100">
+    <ng-container matColumnDef="titulo">
+      <th mat-header-cell *matHeader-cellDef>Título de Asamblea</th>
+      <td mat-cell *matCellDef="let element"><strong>{{ element.titulo }}</strong></td>
+    </ng-container>
+
+    <ng-container matColumnDef="tipo">
+      <th mat-header-cell *matHeader-cellDef>Tipo</th>
+      <td mat-cell *matCellDef="let element">{{ element.tipo }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="fecha">
+      <th mat-header-cell *matHeader-cellDef>Fecha</th>
+      <td mat-cell *matCellDef="let element">{{ element.fecha }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="horaInicio">
+      <th mat-header-cell *matHeader-cellDef>Hora Inicio</th>
+      <td mat-cell *matCellDef="let element">{{ element.horaInicio }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="lugar">
+      <th mat-header-cell *matHeader-cellDef>Lugar</th>
+      <td mat-cell *matCellDef="let element">{{ element.lugar }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeader-cellDef>Estado</th>
+      <td mat-cell *matCellDef="let element">
+        <span [class]="element.estado | estadoBadge">
+          {{ element.estado }}
+        </span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="quorumMinimoPct">
+      <th mat-header-cell *matHeader-cellDef>Quórum Mín</th>
+      <td mat-cell *matCellDef="let element">{{ element.quorumMinimoPct }}%</td>
+    </ng-container>
+
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeader-cellDef>Acciones</th>
+      <td mat-cell *matCellDef="let element">
+        <button mat-icon-button color="primary" (click)="verDetalle(element)" matTooltip="Ver detalle">
+          <mat-icon>visibility</mat-icon>
+        </button>
+        <button mat-icon-button color="accent" *ngIf="element.estado === 'PROGRAMADA'" (click)="cambiarEstado(element, 'EN_CURSO')" matTooltip="Iniciar Asamblea">
+          <mat-icon>play_arrow</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" *ngIf="element.estado === 'EN_CURSO'" (click)="cambiarEstado(element, 'FINALIZADA')" matTooltip="Finalizar Asamblea">
+          <mat-icon>stop</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeader-rowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+
+  <mat-paginator
+    [length]="totalElements"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[5, 10, 25]"
+    (page)="onPageChange($event)"
+    showFirstLastButtons>
+  </mat-paginator>
+</mat-card>
+
+<!-- DIALOG: CREAR ASAMBLEA -->
+<ng-template #asambleaFormDialog>
+  <h2 mat-dialog-title>Convocar Nueva Asamblea</h2>
+  <mat-dialog-content>
+    <form [formGroup]="asambleaForm" class="dialog-form">
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Título de la Convocatoria</mat-label>
+        <input matInput formControlName="titulo" placeholder="Ej. Asamblea General Ordinaria - Agosto 2026">
+        <mat-error *ngIf="asambleaForm.get('titulo')?.hasError('required')">El título es obligatorio</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Agenda / Puntos a Tratar</mat-label>
+        <textarea matInput formControlName="agenda" rows="3" placeholder="1. Lectura del acta anterior. 2. Informe financiero. 3. Votación de faena comunal."></textarea>
+        <mat-error *ngIf="asambleaForm.get('agenda')?.hasError('required')">La agenda es obligatoria</mat-error>
+      </mat-form-field>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de Asamblea</mat-label>
+          <mat-select formControlName="tipo">
+            <mat-option value="ORDINARIA">Ordinaria</mat-option>
+            <mat-option value="EXTRAORDINARIA">Extraordinaria</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha</mat-label>
+          <input matInput type="date" formControlName="fecha">
+          <mat-error *ngIf="asambleaForm.get('fecha')?.hasError('required')">La fecha es obligatoria</mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Hora Inicio</mat-label>
+          <input matInput type="time" formControlName="horaInicio">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Quórum Mínimo (%)</mat-label>
+          <input matInput type="number" formControlName="quorumMinimoPct">
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Lugar</mat-label>
+        <input matInput formControlName="lugar" placeholder="Ej. Local Comunal Central">
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancelar</button>
+    <button mat-raised-button color="primary" (click)="guardarAsamblea()">
+      <mat-icon>save</mat-icon> Publicar Convocatoria
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<!-- DIALOG: DETALLE ASAMBLEA -->
+<ng-template #detalleDialog>
+  <h2 mat-dialog-title>Detalle de la Asamblea</h2>
+  <mat-dialog-content *ngIf="selectedAsamblea">
+    <div class="detail-box">
+      <div class="detail-item"><span>Título:</span> <strong>{{ selectedAsamblea.titulo }}</strong></div>
+      <div class="detail-item"><span>Tipo:</span> <span>{{ selectedAsamblea.tipo }}</span></div>
+      <div class="detail-item"><span>Fecha y Hora:</span> <span>{{ selectedAsamblea.fecha }} a las {{ selectedAsamblea.horaInicio }}</span></div>
+      <div class="detail-item"><span>Lugar:</span> <span>{{ selectedAsamblea.lugar }}</span></div>
+      <div class="detail-item"><span>Estado:</span> <span [class]="selectedAsamblea.estado | estadoBadge">{{ selectedAsamblea.estado }}</span></div>
+      <div class="detail-item"><span>Quórum Mínimo Requerido:</span> <span>{{ selectedAsamblea.quorumMinimoPct }}%</span></div>
+      <div class="detail-agenda">
+        <span>Agenda:</span>
+        <p>{{ selectedAsamblea.agenda }}</p>
+      </div>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-raised-button color="primary" mat-dialog-close>Cerrar</button>
+  </mat-dialog-actions>
+</ng-template>

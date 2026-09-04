@@ -1,0 +1,106 @@
+<app-page-header
+  title="Bitácora de Auditoría del Sistema"
+  subtitle="Trazabilidad inmutable de todas las acciones, modificaciones e inicios de sesión"
+  icon="security">
+</app-page-header>
+
+<!-- Filtros -->
+<mat-card class="filter-card" style="margin-bottom: 16px;">
+  <div class="filter-row">
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Usuario</mat-label>
+      <input matInput [(ngModel)]="filtroUsername" placeholder="Ej: jperez">
+      <mat-icon matSuffix>person</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Acción</mat-label>
+      <mat-select [(ngModel)]="filtroAccion">
+        <mat-option value="">Todas</mat-option>
+        <mat-option *ngFor="let a of acciones" [value]="a">{{ a }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Desde</mat-label>
+      <input matInput type="date" [(ngModel)]="filtroFechaInicio">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-field">
+      <mat-label>Hasta</mat-label>
+      <input matInput type="date" [(ngModel)]="filtroFechaFin">
+    </mat-form-field>
+
+    <div class="filter-actions">
+      <button mat-raised-button color="primary" (click)="onFiltrar()">
+        <mat-icon>search</mat-icon> Filtrar
+      </button>
+      <button mat-button (click)="limpiarFiltros()">
+        <mat-icon>clear</mat-icon> Limpiar
+      </button>
+    </div>
+
+  </div>
+</mat-card>
+
+<!-- Tabla -->
+<mat-card class="table-card">
+  <div class="loading-shade" *ngIf="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <table mat-table [dataSource]="logs" class="w-100">
+
+    <ng-container matColumnDef="fechaHora">
+      <th mat-header-cell *matHeaderCellDef>Fecha y Hora</th>
+      <td mat-cell *matCellDef="let element">
+        <code>{{ element.fechaHora | date:'dd/MM/yyyy HH:mm:ss' }}</code>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="username">
+      <th mat-header-cell *matHeaderCellDef>Usuario</th>
+      <td mat-cell *matCellDef="let element"><strong>{{ element.username }}</strong></td>
+    </ng-container>
+
+    <ng-container matColumnDef="accion">
+      <th mat-header-cell *matHeaderCellDef>Acción</th>
+      <td mat-cell *matCellDef="let element">
+        <span class="badge badge-info">{{ element.accion }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="entidad">
+      <th mat-header-cell *matHeaderCellDef>Entidad</th>
+      <td mat-cell *matCellDef="let element">{{ element.entidad }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="entidadId">
+      <th mat-header-cell *matHeaderCellDef>ID Registro</th>
+      <td mat-cell *matCellDef="let element">{{ element.entidadId || '-' }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="ipOrigen">
+      <th mat-header-cell *matHeaderCellDef>IP Origen</th>
+      <td mat-cell *matCellDef="let element"><code>{{ element.ipOrigen }}</code></td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+    <tr class="mat-row" *matNoDataRow>
+      <td class="mat-cell" colspan="6" style="text-align:center; padding: 24px;">
+        No hay registros de auditoría con los filtros aplicados.
+      </td>
+    </tr>
+  </table>
+
+  <mat-paginator
+    [length]="totalElements"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[10, 20, 50, 100]"
+    (page)="onPageChange($event)"
+    showFirstLastButtons>
+  </mat-paginator>
+</mat-card>

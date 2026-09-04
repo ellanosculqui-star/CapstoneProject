@@ -1,0 +1,181 @@
+<app-page-header
+  title="Registro de Actas y Acuerdos de Asambleas"
+  subtitle="Redacción de actas de asambleas activas, firmas digitales y archivo oficial"
+  icon="description">
+</app-page-header>
+
+<div class="top-action-bar">
+  <mat-form-field appearance="outline" class="filter-select">
+    <mat-label>Filtrar Estado de Actas</mat-label>
+    <mat-select [(ngModel)]="estadoFiltro" (selectionChange)="cargarActas()">
+      <mat-option value="">Todas las Actas</mat-option>
+      <mat-option value="BORRADOR">Pendientes de Firma (Borradores)</mat-option>
+      <mat-option value="APROBADA">Aprobadas / Firmadas</mat-option>
+      <mat-option value="FINALIZADA">Finalizadas</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <button mat-raised-button color="primary" class="create-btn" (click)="abrirCrearModal()">
+    <mat-icon>post_add</mat-icon> Redactar Nueva Acta
+  </button>
+</div>
+
+<mat-card class="table-card">
+  <div class="loading-shade" *ngIf="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <table mat-table [dataSource]="actas" class="w-100">
+    <ng-container matColumnDef="numeroActa">
+      <th mat-header-cell *matHeader-cellDef>N° de Acta</th>
+      <td mat-cell *matCellDef="let element"><strong>{{ element.numeroActa }}</strong></td>
+    </ng-container>
+
+    <ng-container matColumnDef="asambleaTitulo">
+      <th mat-header-cell *matHeader-cellDef>Asamblea Vinculada</th>
+      <td mat-cell *matCellDef="let element">{{ element.asambleaTitulo }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="fecha">
+      <th mat-header-cell *matHeader-cellDef>Fecha</th>
+      <td mat-cell *matCellDef="let element">{{ element.fecha }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="lugar">
+      <th mat-header-cell *matHeader-cellDef>Lugar</th>
+      <td mat-cell *matCellDef="let element">{{ element.lugar }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="estado">
+      <th mat-header-cell *matHeader-cellDef>Estado de Acta</th>
+      <td mat-cell *matCellDef="let element">
+        <span [class]="element.estado | estadoBadge">{{ element.estado }}</span>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="acciones">
+      <th mat-header-cell *matHeader-cellDef>Acciones</th>
+      <td mat-cell *matCellDef="let element">
+        <button mat-icon-button color="primary" (click)="verDetalle(element)" matTooltip="Ver detalle completo">
+          <mat-icon>visibility</mat-icon>
+        </button>
+
+        <!-- Botón para Firmar / Aprobar únicamente si el acta no ha sido finalizada/aprobada aún -->
+        <button mat-raised-button color="accent" class="action-firmar-btn"
+                *ngIf="element.estado === 'BORRADOR' || element.estado === 'OBSERVADA'"
+                (click)="firmarYAprobarActa(element)"
+                matTooltip="Firmar y Aprobar Acta">
+          <mat-icon>draw</mat-icon> Firmar
+        </button>
+
+        <button mat-icon-button color="warn" (click)="imprimirActa(element)" matTooltip="Imprimir / PDF">
+          <mat-icon>print</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeader-rowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+</mat-card>
+
+<!-- DIALOG: CREAR ACTA (SÓLO ASAMBLEAS ACTIVAS) -->
+<ng-template #actaFormDialog>
+  <h2 mat-dialog-title>Redactar Nueva Acta de Asamblea</h2>
+  <mat-dialog-content>
+    <form [formGroup]="actaForm" class="dialog-form">
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Seleccionar Asamblea Activa (En curso / Programada)</mat-label>
+        <mat-select formControlName="asambleaId" (selectionChange)="onAsambleaSeleccionada($event.value)">
+          <mat-option *ngFor="let a of asambleasActivas" [value]="a.id">
+            🟢 {{ a.titulo }} ({{ a.fecha }}) - {{ a.estado }}
+          </mat-option>
+        </mat-select>
+        <mat-hint *ngIf="asambleasActivas.length === 0" class="warn-hint">
+          No hay asambleas activas en curso en este momento.
+        </mat-hint>
+        <mat-error *ngIf="actaForm.get('asambleaId')?.hasError('required')">Debe seleccionar una asamblea activa</mat-error>
+      </mat-form-field>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Número de Acta</mat-label>
+          <input matInput formControlName="numeroActa" placeholder="Ej. ACT-2026-001">
+          <mat-error *ngIf="actaForm.get('numeroActa')?.hasError('required')">Obligatorio</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha</mat-label>
+          <input matInput type="date" formControlName="fecha">
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Lugar de Celebración</mat-label>
+        <input matInput formControlName="lugar">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Agenda y Orden del Día</mat-label>
+        <textarea matInput formControlName="agenda" rows="3" placeholder="Puntos aprobados en la reunión..."></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Resumen de Debates y Acuerdos Tomados</mat-label>
+        <textarea matInput formControlName="resumen" rows="4" placeholder="Desarrollo de la asamblea y decisiones acordadas por mayoría..."></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Observaciones Adicionales</mat-label>
+        <input matInput formControlName="observaciones">
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancelar</button>
+    <button mat-raised-button color="primary" (click)="guardarActa()">
+      <mat-icon>save</mat-icon> Guardar Borrador
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+<!-- DIALOG: DETALLE DEL ACTA Y FIRMA -->
+<ng-template #detalleDialog>
+  <h2 mat-dialog-title>Acta N° {{ selectedActa?.numeroActa }}</h2>
+  <mat-dialog-content *ngIf="selectedActa">
+    <div class="acta-view">
+      <div class="acta-header-info">
+        <p><strong>Asamblea:</strong> {{ selectedActa.asambleaTitulo }}</p>
+        <p><strong>Fecha y Lugar:</strong> {{ selectedActa.fecha }} — {{ selectedActa.lugar }}</p>
+        <p><strong>Responsable / Secretario:</strong> {{ selectedActa.responsableNombre }}</p>
+        <p><strong>Estado:</strong> <span [class]="selectedActa.estado | estadoBadge">{{ selectedActa.estado }}</span></p>
+      </div>
+
+      <div class="acta-section">
+        <h3>1. Asistencia y Quórum Computado</h3>
+        <p>Habilitados: <strong>{{ selectedActa.totalHabilitados }}</strong> | Asistentes: <strong>{{ selectedActa.totalAsistentes }}</strong> | Ausentes: <strong>{{ selectedActa.totalAusentes }}</strong></p>
+        <p>Porcentaje Asistencia: <strong>{{ selectedActa.porcentajeAsistencia }}%</strong> (Quórum {{ selectedActa.quorumAlcanzado ? 'Alcanzado' : 'No Alcanzado' }})</p>
+      </div>
+
+      <div class="acta-section">
+        <h3>2. Agenda Tratada</h3>
+        <p class="content-text">{{ selectedActa.agenda }}</p>
+      </div>
+
+      <div class="acta-section" *ngIf="selectedActa.resumen">
+        <h3>3. Acuerdos y Deliberación</h3>
+        <p class="content-text">{{ selectedActa.resumen }}</p>
+      </div>
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-raised-button color="accent"
+            *ngIf="selectedActa?.estado === 'BORRADOR' || selectedActa?.estado === 'OBSERVADA'"
+            (click)="firmarYAprobarActa(selectedActa)">
+      <mat-icon>draw</mat-icon> Firmar y Aprobar Acta
+    </button>
+    <button mat-stroked-button (click)="imprimirActa(selectedActa)"><mat-icon>print</mat-icon> Imprimir</button>
+    <button mat-raised-button color="primary" mat-dialog-close>Cerrar</button>
+  </mat-dialog-actions>
+</ng-template>

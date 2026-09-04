@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["page-header.component.ts"],
+  "sourcesContent": ["\n    .page-header {\n      border-bottom: 1px solid #e2e8f0;\n      padding-bottom: 16px;\n\n      .title-with-icon {\n        display: flex;\n        align-items: center;\n        gap: 10px;\n\n        .header-icon {\n          color: #3b82f6;\n          font-size: 32px;\n          width: 32px;\n          height: 32px;\n        }\n\n        .page-title {\n          font-size: 1.6rem;\n          font-weight: 700;\n          color: #1e293b;\n          margin: 0;\n        }\n      }\n\n      .page-subtitle {\n        font-size: 0.9rem;\n        color: #64748b;\n        margin: 4px 0 0 0;\n      }\n    }\n  "],
+  "mappings": ";AACI,CAAA;AACE,iBAAA,IAAA,MAAA;AACA,kBAAA;;AAEA,CAJF,YAIE,CAAA;AACE,WAAA;AACA,eAAA;AACA,OAAA;;AAEA,CATJ,YASI,CALF,gBAKE,CAAA;AACE,SAAA;AACA,aAAA;AACA,SAAA;AACA,UAAA;;AAGF,CAhBJ,YAgBI,CAZF,gBAYE,CAAA;AACE,aAAA;AACA,eAAA;AACA,SAAA;AACA,UAAA;;AAIJ,CAxBF,YAwBE,CAAA;AACE,aAAA;AACA,SAAA;AACA,UAAA,IAAA,EAAA,EAAA;;",
+  "names": []
+}

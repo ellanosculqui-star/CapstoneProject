@@ -1,0 +1,134 @@
+<mat-sidenav-container class="app-container">
+  <!-- Sidebar -->
+  <mat-sidenav #sidenav mode="side" opened class="app-sidenav" [fixedInViewport]="true">
+    <!-- Logo / Brand -->
+    <div class="sidenav-header">
+      <div class="brand-logo">
+        <mat-icon class="brand-icon">account_balance</mat-icon>
+        <div class="brand-text">
+          <span class="brand-name">GestiónComunal</span>
+          <span class="brand-sub">Gestión de Asambleas</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Info -->
+    <div class="user-info-box">
+      <div class="user-avatar">{{ (authService.currentUserValue?.nombres || 'U').charAt(0).toUpperCase() }}</div>
+      <div class="user-details">
+        <span class="user-name">{{ authService.currentUserValue?.nombres }} {{ authService.currentUserValue?.apellidos }}</span>
+        <span class="user-role-label">{{ userRoleLabel }}</span>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Navigation Menu -->
+    <mat-nav-list class="nav-list">
+      <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>dashboard</mat-icon>
+        <span matListItemTitle>Dashboard</span>
+      </a>
+        <a mat-list-item routerLink="/caserios" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>map</mat-icon>
+        <span matListItemTitle>Caseríos y Sectores</span>
+      </a>
+
+      <a mat-list-item routerLink="/comuneros" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR','ROLE_PRESIDENTE','ROLE_SECRETARIO','ROLE_TESORERO']">
+        <mat-icon matListItemIcon>people</mat-icon>
+        <span matListItemTitle>Padrón de Comuneros</span>
+      </a>
+
+      <a mat-list-item routerLink="/asambleas" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR','ROLE_PRESIDENTE','ROLE_SECRETARIO']">
+        <mat-icon matListItemIcon>meeting_room</mat-icon>
+        <span matListItemTitle>Asambleas</span>
+      </a>
+
+      <a mat-list-item routerLink="/asistencia" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR','ROLE_PRESIDENTE','ROLE_SECRETARIO']">
+        <mat-icon matListItemIcon>fact_check</mat-icon>
+        <span matListItemTitle>Control de Asistencia</span>
+      </a>
+
+      <a mat-list-item routerLink="/votaciones" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR','ROLE_PRESIDENTE','ROLE_SECRETARIO','ROLE_COMUNERO']">
+        <mat-icon matListItemIcon>how_to_vote</mat-icon>
+        <span matListItemTitle>Votaciones</span>
+      </a>
+
+      <a mat-list-item routerLink="/multas" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR','ROLE_PRESIDENTE','ROLE_SECRETARIO','ROLE_TESORERO']">
+        <mat-icon matListItemIcon>receipt_long</mat-icon>
+        <span matListItemTitle>Multas y Pagos</span>
+      </a>
+
+      <a mat-list-item routerLink="/actas" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR','ROLE_PRESIDENTE','ROLE_SECRETARIO']">
+        <mat-icon matListItemIcon>description</mat-icon>
+        <span matListItemTitle>Actas</span>
+      </a>
+
+      <a mat-list-item routerLink="/reportes" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR','ROLE_PRESIDENTE','ROLE_SECRETARIO','ROLE_TESORERO']">
+        <mat-icon matListItemIcon>bar_chart</mat-icon>
+        <span matListItemTitle>Reportes</span>
+      </a>
+
+      <mat-divider></mat-divider>
+
+      <a mat-list-item routerLink="/auditoria" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR']">
+        <mat-icon matListItemIcon>manage_search</mat-icon>
+        <span matListItemTitle>Auditoría</span>
+      </a>
+
+      <a mat-list-item routerLink="/usuarios" routerLinkActive="active-link"
+         *appHasRole="['ROLE_ADMINISTRADOR']">
+        <mat-icon matListItemIcon>manage_accounts</mat-icon>
+        <span matListItemTitle>Usuarios del Sistema</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <!-- Main Content -->
+  <mat-sidenav-content class="app-content">
+    <!-- Top Toolbar -->
+    <mat-toolbar color="primary" class="top-toolbar">
+      <button mat-icon-button (click)="sidenav.toggle()" class="menu-btn">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="toolbar-spacer"></span>
+
+      <!-- User Menu -->
+      <button mat-button [matMenuTriggerFor]="userMenu" class="user-menu-btn">
+        <div class="user-avatar-small">
+          {{ (authService.currentUserValue?.nombres || 'U').charAt(0).toUpperCase() }}
+        </div>
+        <span class="username-text">{{ authService.currentUserValue?.nombres }}</span>
+        <mat-icon>arrow_drop_down</mat-icon>
+      </button>
+
+      <mat-menu #userMenu="matMenu">
+        <div class="menu-user-header">
+          <strong>{{ authService.currentUserValue?.nombres }} {{ authService.currentUserValue?.apellidos }}</strong>
+          <small>{{ authService.currentUserValue?.username }}</small>
+          <small>{{ userRoleLabel }}</small>
+        </div>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          <span>Cerrar Sesión</span>
+        </button>
+      </mat-menu>
+    </mat-toolbar>
+
+    <!-- Page Content -->
+    <div class="page-content">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>
+
+<app-loading-spinner></app-loading-spinner>

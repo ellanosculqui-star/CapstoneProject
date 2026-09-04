@@ -1,0 +1,307 @@
+<app-page-header
+  title="Control de Asistencia y Quórum"
+  subtitle="Registro en tiempo real, validación con QR y cálculo automático de quórum"
+  icon="how_to_reg">
+
+  <div class="header-tools">
+    <!-- Indicador de Conexión y Offline (Prompt Sección 20) -->
+    <div class="connection-badge" [ngClass]="isOnline ? 'online' : 'offline'">
+      <span class="status-dot"></span>
+      <span *ngIf="isOnline && pendingOfflineCount === 0">🟢 Conectado</span>
+      <span *ngIf="isOnline && pendingOfflineCount > 0">🟡 Conectado ({{ pendingOfflineCount }} pendientes)</span>
+      <span *ngIf="!isOnline">🔴 Modo Offline ({{ pendingOfflineCount }} pendientes)</span>
+    </div>
+
+    <button mat-flat-button color="accent" *ngIf="pendingOfflineCount > 0" (click)="sincronizarAhora()" [disabled]="!isOnline">
+      <mat-icon>sync</mat-icon> Sincronizar ({{ pendingOfflineCount }})
+    </button>
+
+    <button mat-raised-button color="primary" (click)="toggleModoAsamblea()" class="btn-modo-asamblea">
+      <mat-icon>{{ modoAsamblea ? 'view_list' : 'fullscreen' }}</mat-icon>
+      {{ modoAsamblea ? 'Vista Normal' : 'Modo Asamblea' }}
+    </button>
+  </div>
+</app-page-header>
+
+<!-- ========================================================================= -->
+<!-- MODO ASAMBLEA EN VIVO (Prompt Maestro Sección 25)                          -->
+<!-- ========================================================================= -->
+<div class="modo-asamblea-container" *ngIf="modoAsamblea && selectedAsamblea">
+  <mat-card class="asamblea-console-card">
+    <div class="console-header">
+      <div class="console-title">
+        <span class="eyebrow">SESIÓN EN VIVO — COMUNIDAD CAMPESINA LA ENCAÑADA</span>
+        <h1>{{ selectedAsamblea.titulo }}</h1>
+        <p><mat-icon>calendar_today</mat-icon> {{ selectedAsamblea.fecha }} &nbsp;|&nbsp; <mat-icon>place</mat-icon> {{ selectedAsamblea.lugar }}</p>
+      </div>
+
+      <div class="console-actions-top">
+        <button mat-stroked-button (click)="abrirQrDialog()">
+          <mat-icon>qr_code_2</mat-icon> Proyectar QR
+        </button>
+        <button mat-button (click)="toggleModoAsamblea()">
+          <mat-icon>close</mat-icon> Salir de Pantalla Completa
+        </button>
+      </div>
+    </div>
+
+    <!-- PANTALLA PRINCIPAL DE QUÓRUM -->
+    <div class="quorum-hero-banner" *ngIf="quorumInfo" [ngClass]="quorumInfo.quorumAlcanzado ? 'hero-reached' : 'hero-pending'">
+      <div class="hero-status-pill">
+        <mat-icon>{{ quorumInfo.quorumAlcanzado ? 'check_circle' : 'hourglass_top' }}</mat-icon>
+        <span>{{ quorumInfo.quorumAlcanzado ? 'QUÓRUM ALCANZADO' : 'QUÓRUM PENDIENTE' }}</span>
+      </div>
+
+      <div class="hero-percentage">
+        <span class="pct-num">{{ quorumInfo.porcentajeAsistencia }}%</span>
+        <span class="pct-label">DE PARTICIPACIÓN</span>
+      </div>
+
+      <div class="hero-progress-wrapper">
+        <mat-progress-bar
+          mode="determinate"
+          [value]="quorumInfo.porcentajeAsistencia"
+          [color]="quorumInfo.quorumAlcanzado ? 'primary' : 'warn'">
+        </mat-progress-bar>
+        <span class="threshold-hint">Meta reglamentaria: {{ quorumInfo.quorumMinimoPct }}%</span>
+      </div>
+
+      <!-- MÉTRICAS CLAVE -->
+      <div class="hero-metrics-grid">
+        <div class="h-metric">
+          <span class="h-label">Habilitados</span>
+          <span class="h-val">{{ quorumInfo.totalHabilitados }}</span>
+        </div>
+        <div class="h-metric present">
+          <span class="h-label">Presentes</span>
+          <span class="h-val">{{ quorumInfo.asistentes }}</span>
+        </div>
+        <div class="h-metric absent">
+          <span class="h-label">Ausentes</span>
+          <span class="h-val">{{ quorumInfo.ausentes }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BARRA DE BOTONES DE ACCIÓN RÁPIDA (Prompt Sección 25) -->
+    <div class="quick-actions-bar">
+      <button mat-raised-button color="primary" (click)="abrirQrDialog()" class="q-btn">
+        <mat-icon>qr_code</mat-icon> MOSTRAR QR
+      </button>
+      <button mat-raised-button color="accent" (click)="navegarA('/votaciones')" class="q-btn">
+        <mat-icon>how_to_vote</mat-icon> INICIAR VOTACIÓN
+      </button>
+      <button mat-raised-button class="q-btn btn-actas" (click)="navegarA('/actas')">
+        <mat-icon>edit_note</mat-icon> REGISTRAR ACUERDO
+      </button>
+      <button mat-stroked-button color="primary" (click)="navegarA('/actas')" class="q-btn">
+        <mat-icon>description</mat-icon> GENERAR ACTA
+      </button>
+    </div>
+
+    <!-- ESCÁNER RÁPIDO DENTRO DE MODO ASAMBLEA -->
+    <div class="console-scan-bar">
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Escanear DNI de Comunero o Código para Asistencia Instantánea</mat-label>
+        <mat-icon matPrefix>qr_code_scanner</mat-icon>
+        <input matInput [(ngModel)]="scanDni" (keyup.enter)="onScanDni()" placeholder="Ingrese DNI y presione Enter">
+      </mat-form-field>
+      <button mat-flat-button color="accent" (click)="onScanDni()" [disabled]="!scanDni">
+        <mat-icon>check</mat-icon> Registrar
+      </button>
+    </div>
+  </mat-card>
+</div>
+
+<!-- ========================================================================= -->
+<!-- VISTA ESTÁNDAR DE CONTROL DE ASISTENCIA                                  -->
+<!-- ========================================================================= -->
+<div class="asistencia-standard-container" *ngIf="!modoAsamblea">
+
+  <div class="asistencia-header-grid">
+    <!-- Selector de Asamblea -->
+    <mat-card class="select-card">
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="w-100">
+          <mat-label>Seleccionar Asamblea Comunitaria</mat-label>
+          <mat-select [(ngModel)]="selectedAsambleaId" (selectionChange)="onAsambleaChange()">
+            <mat-option *ngFor="let a of asambleas" [value]="a.id">
+              [{{ a.estado }}] {{ a.titulo }} ({{ a.fecha }})
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Panel de Quórum en Vivo -->
+    <mat-card class="quorum-card" *ngIf="quorumInfo" [class.reached]="quorumInfo.quorumAlcanzado" [class.not-reached]="!quorumInfo.quorumAlcanzado">
+      <mat-card-content class="quorum-content">
+        <div class="quorum-status">
+          <mat-icon>{{ quorumInfo.quorumAlcanzado ? 'check_circle' : 'cancel' }}</mat-icon>
+          <div class="quorum-text">
+            <h2>{{ quorumInfo.porcentajeAsistencia }}% DE ASISTENCIA</h2>
+            <p>{{ quorumInfo.estadoMensaje }} (Quórum mín: {{ quorumInfo.quorumMinimoPct }}%)</p>
+          </div>
+        </div>
+        <div class="quorum-metrics">
+          <div class="metric"><span>Asistentes:</span> <strong>{{ quorumInfo.asistentes }}</strong></div>
+          <div class="metric"><span>Ausentes:</span> <strong>{{ quorumInfo.ausentes }}</strong></div>
+          <div class="metric"><span>Habilitados:</span> <strong>{{ quorumInfo.totalHabilitados }}</strong></div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Banner de Estado de Asamblea -->
+  <mat-card class="estado-asamblea-banner" *ngIf="selectedAsamblea && selectedAsamblea.estado !== 'EN_CURSO'" [ngClass]="{
+    'programada': selectedAsamblea.estado === 'PROGRAMADA',
+    'finalizada': selectedAsamblea.estado === 'FINALIZADA'
+  }">
+    <mat-card-content class="banner-content">
+      <div class="banner-info">
+        <mat-icon *ngIf="selectedAsamblea.estado === 'PROGRAMADA'">info</mat-icon>
+        <mat-icon *ngIf="selectedAsamblea.estado === 'FINALIZADA'">lock</mat-icon>
+        <div>
+          <strong *ngIf="selectedAsamblea.estado === 'PROGRAMADA'">Asamblea Programada</strong>
+          <strong *ngIf="selectedAsamblea.estado === 'FINALIZADA'">Asamblea Finalizada</strong>
+          <p *ngIf="selectedAsamblea.estado === 'PROGRAMADA'">Para tomar asistencia e iniciar las votaciones digitales en vivo, inicie la sesión de la asamblea.</p>
+          <p *ngIf="selectedAsamblea.estado === 'FINALIZADA'">Esta asamblea ha concluido y los registros de asistencia han sido archivados.</p>
+        </div>
+      </div>
+      <button mat-raised-button color="primary" *ngIf="selectedAsamblea.estado === 'PROGRAMADA'" (click)="iniciarAsamblea()">
+        <mat-icon>play_arrow</mat-icon> Iniciar Asamblea (Poner EN CURSO)
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Escáner y Filtros de Búsqueda -->
+  <mat-card class="scan-card" *ngIf="selectedAsambleaId">
+    <mat-card-content>
+      <div class="scan-grid">
+        <mat-form-field appearance="outline" class="scan-input">
+          <mat-label>Escáner de DNI / Registro Rápido</mat-label>
+          <mat-icon matPrefix>qr_code_scanner</mat-icon>
+          <input matInput [(ngModel)]="scanDni" (keyup.enter)="onScanDni()" [disabled]="selectedAsamblea?.estado !== 'EN_CURSO'" placeholder="Ingrese DNI de 8 dígitos y presione Enter">
+        </mat-form-field>
+
+        <button mat-raised-button color="accent" (click)="onScanDni()" [disabled]="!scanDni || selectedAsamblea?.estado !== 'EN_CURSO'" class="btn-scan">
+          <mat-icon>check_circle</mat-icon> Presente
+        </button>
+
+        <mat-form-field appearance="outline" class="search-input">
+          <mat-label>Filtrar comunero en tabla</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="filtroTexto" (input)="aplicarFiltro()" placeholder="Buscar por nombre o DNI">
+        </mat-form-field>
+
+        <button mat-stroked-button (click)="abrirQrDialog()" class="btn-qr">
+          <mat-icon>qr_code</mat-icon> Ver QR Asamblea
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tabla del Padrón de Asistencia -->
+  <mat-card class="table-card" *ngIf="selectedAsambleaId">
+    <div class="loading-shade" *ngIf="loading">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+
+    <table mat-table [dataSource]="padronFiltrado" class="w-100">
+      <ng-container matColumnDef="codigoComunero">
+        <th mat-header-cell *matHeaderCellDef>Código</th>
+        <td mat-cell *matCellDef="let element"><strong>{{ element.codigoComunero }}</strong></td>
+      </ng-container>
+
+      <ng-container matColumnDef="dni">
+        <th mat-header-cell *matHeaderCellDef>DNI</th>
+        <td mat-cell *matCellDef="let element">{{ element.dni }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="nombreCompleto">
+        <th mat-header-cell *matHeaderCellDef>Comunero</th>
+        <td mat-cell *matCellDef="let element">{{ element.nombreCompleto }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="condicionHabilitacion">
+        <th mat-header-cell *matHeaderCellDef>Condición</th>
+        <td mat-cell *matCellDef="let element">
+          <span [class]="element.condicionHabilitacion | estadoBadge">{{ element.condicionHabilitacion }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="estadoAsistencia">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let element">
+          <span [class]="element.estadoAsistencia | estadoBadge" *ngIf="element.estadoAsistencia">
+            {{ element.estadoAsistencia }}
+          </span>
+          <span class="badge badge-secondary" *ngIf="!element.estadoAsistencia">PENDIENTE</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef>Acción Rápida</th>
+        <td mat-cell *matCellDef="let element">
+          <button mat-flat-button color="primary" class="action-btn" [disabled]="selectedAsamblea?.estado !== 'EN_CURSO'" (click)="marcarAsistencia(element, 'PRESENTE')">
+            PRESENTE
+          </button>
+          <button mat-flat-button color="warn" class="action-btn" [disabled]="selectedAsamblea?.estado !== 'EN_CURSO'" (click)="marcarAsistencia(element, 'AUSENTE')">
+            AUSENTE
+          </button>
+          <button mat-stroked-button class="action-btn" [disabled]="selectedAsamblea?.estado !== 'EN_CURSO'" (click)="marcarAsistencia(element, 'JUSTIFICADO')">
+            JUSTIFICADO
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell" colspan="6" style="text-align: center; padding: 24px;">
+          No se encontraron comuneros que coincidan con la búsqueda.
+        </td>
+      </tr>
+    </table>
+  </mat-card>
+
+</div>
+
+<!-- DIALOG PARA CÓDIGO QR DE ASAMBLEA (Prompt Sección 8) -->
+<ng-template #qrDialog>
+  <div class="qr-dialog-content">
+    <h2><mat-icon>qr_code_2</mat-icon> Código QR de Asistencia en Vivo</h2>
+    <p>Escanee este código para ingresar directamente al control de asistencia de la asamblea seleccionada.</p>
+
+    <div class="qr-image-box" *ngIf="selectedAsambleaId">
+      <img [src]="qrUrl" alt="QR Asamblea" class="qr-img">
+    </div>
+
+    <div class="qr-info">
+      <strong>{{ selectedAsamblea?.titulo }}</strong>
+      <span>ID de Asamblea: #{{ selectedAsambleaId }} — {{ selectedAsamblea?.estado }}</span>
+      <code class="qr-link-text">{{ qrLinkDirecto }}</code>
+    </div>
+
+    <div class="qr-testing-guide">
+      <p class="guide-title">📱 <strong>¿Cómo comprobar el QR?</strong></p>
+      <ul>
+        <li><strong>Desde el Celular:</strong> Abre la app de <em>Cámara</em> de tu celular y apunta hacia el código QR de arriba. Aparecerá una notificación emergente para abrir el enlace.</li>
+        <li><strong>Desde la Laptop:</strong> Haz clic en el botón <em>"Probar Enlace en Nueva Pestaña"</em> o copia la URL directa para abrirla en cualquier navegador.</li>
+      </ul>
+    </div>
+
+    <div class="dialog-actions qr-actions">
+      <button mat-stroked-button (click)="copiarQrLink()">
+        <mat-icon>content_copy</mat-icon> Copiar Enlace
+      </button>
+
+      <button mat-raised-button color="accent" (click)="probarQrLink()">
+        <mat-icon>open_in_new</mat-icon> Probar Enlace
+      </button>
+
+      <button mat-button mat-dialog-close color="primary">Cerrar</button>
+    </div>
+  </div>
+</ng-template>

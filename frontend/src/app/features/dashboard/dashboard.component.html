@@ -1,0 +1,189 @@
+<app-page-header
+  title="Plataforma Inteligente de Gestión Comunal"
+  subtitle="Comunidad Campesina de La Encañada, Cajamarca — 2026"
+  icon="insights">
+  <div class="header-actions">
+    <a mat-raised-button color="accent" routerLink="/asistencia" class="btn-live">
+      <mat-icon>live_tv</mat-icon> Modo Asamblea en Vivo
+    </a>
+    <button mat-stroked-button (click)="cargarStats()">
+      <mat-icon>refresh</mat-icon> Actualizar
+    </button>
+  </div>
+</app-page-header>
+
+<div class="dashboard-container" *ngIf="stats">
+
+  <!-- BANNER DE ALERTAS INTELIGENTES (Prompt Sección 19) -->
+  <div class="alertas-section mb-24" *ngIf="stats.alertas && stats.alertas.length > 0">
+    <div class="alerta-card" *ngFor="let alerta of stats.alertas" [ngClass]="alerta.nivel.toLowerCase()">
+      <div class="alerta-icon">
+        <mat-icon *ngIf="alerta.nivel === 'DANGER'">crisis_alert</mat-icon>
+        <mat-icon *ngIf="alerta.nivel === 'WARNING'">warning_amber</mat-icon>
+        <mat-icon *ngIf="alerta.nivel === 'INFO'">info</mat-icon>
+        <mat-icon *ngIf="alerta.nivel === 'SUCCESS'">check_circle</mat-icon>
+      </div>
+      <div class="alerta-body">
+        <h4>{{ alerta.titulo }}</h4>
+        <p>{{ alerta.mensaje }}</p>
+      </div>
+      <div class="alerta-action" *ngIf="alerta.accionUrl">
+        <a mat-stroked-button [routerLink]="alerta.accionUrl">{{ alerta.accionTexto || 'Ver' }}</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TARJETAS DE MÉTRICAS PRINCIPALES -->
+  <div class="stats-grid">
+    <app-stat-card
+      title="Padrón Total"
+      [value]="stats.totalComuneros"
+      icon="people"
+      color="primary"
+      subtitle="Comuneros registrados">
+    </app-stat-card>
+
+    <app-stat-card
+      title="Comuneros Habilitados"
+      [value]="stats.comunerosHabilitados"
+      icon="verified"
+      color="success"
+      [subtitle]="porcentajeHabilitados + '% con derecho a voto'">
+    </app-stat-card>
+
+    <app-stat-card
+      title="Asistencia Promedio"
+      [value]="asistenciaPromedio + '%'"
+      icon="pie_chart"
+      color="indigo"
+      subtitle="En asambleas finalizadas">
+    </app-stat-card>
+
+    <app-stat-card
+      title="Multas Pendientes"
+      [value]="stats.cantidadMultasPendientes"
+      icon="receipt_long"
+      color="warning"
+      [subtitle]="'Monto: ' + (stats.totalMultasPendientes | soles)">
+    </app-stat-card>
+  </div>
+
+  <!-- SECCIÓN DE PREDICCIÓN CON IA & PRÓXIMA ASAMBLEA -->
+  <div class="main-content-grid">
+
+    <!-- TARJETA PREDICCIÓN DE ASISTENCIA Y QUÓRUM (IA) (Prompt Sección 15-18) -->
+    <mat-card class="ia-prediction-card" *ngIf="stats.prediccionProxima">
+      <mat-card-header>
+        <div matCardAvatar class="ai-avatar-icon">
+          <mat-icon>psychology</mat-icon>
+        </div>
+        <mat-card-title>Predicción de Quórum con IA</mat-card-title>
+        <mat-card-subtitle>
+          Modelo: {{ stats.prediccionProxima.versionModelo }}
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="asamblea-target-badge">
+          <mat-icon>event</mat-icon>
+          <strong>{{ stats.prediccionProxima.asambleaTitulo }}</strong>
+          <span *ngIf="stats.prediccionProxima.fecha">({{ stats.prediccionProxima.fecha }})</span>
+        </div>
+
+        <div class="prediction-stats-row">
+          <div class="p-stat">
+            <span class="label">Asistencia Estimada</span>
+            <span class="value">{{ stats.prediccionProxima.asistenciaEstimada }} <small>/ {{ stats.prediccionProxima.totalHabilitados }} comuneros</small></span>
+            <span class="sub">{{ stats.prediccionProxima.porcentajeEstimado }}% del padrón habilitado</span>
+          </div>
+
+          <div class="p-stat">
+            <span class="label">Probabilidad de Quórum</span>
+            <div class="prob-wrapper">
+              <span class="value highlight">{{ stats.prediccionProxima.probabilidadQuorumPct }}%</span>
+              <span class="risk-badge" [ngClass]="'risk-' + stats.prediccionProxima.nivelRiesgo.toLowerCase()">
+                RIESGO {{ stats.prediccionProxima.nivelRiesgo }}
+              </span>
+            </div>
+            <mat-progress-bar
+              mode="determinate"
+              [value]="stats.prediccionProxima.probabilidadQuorumPct"
+              [color]="stats.prediccionProxima.nivelRiesgo === 'BAJO' ? 'primary' : (stats.prediccionProxima.nivelRiesgo === 'MEDIO' ? 'accent' : 'warn')">
+            </mat-progress-bar>
+          </div>
+        </div>
+
+        <div class="recommendation-box">
+          <mat-icon>tips_and_updates</mat-icon>
+          <div class="rec-text">
+            <strong>Diagnóstico y Recomendación:</strong>
+            <p>{{ stats.prediccionProxima.mensajeRecomendacion }}</p>
+          </div>
+        </div>
+
+        <div class="factors-list" *ngIf="stats.prediccionProxima.factoresAnalisis?.length">
+          <span class="factors-title"><mat-icon>analytics</mat-icon> Factores considerados por el modelo:</span>
+          <ul>
+            <li *ngFor="let factor of stats.prediccionProxima.factoresAnalisis">{{ factor }}</li>
+          </ul>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <a mat-flat-button color="primary" routerLink="/asistencia">
+          <mat-icon>how_to_reg</mat-icon> Monitorear en Vivo
+        </a>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- HISTORIAL Y CUMPLIMIENTO DE QUÓRUM -->
+    <mat-card class="history-card">
+      <mat-card-header>
+        <mat-icon matCardAvatar class="card-header-icon">timeline</mat-icon>
+        <mat-card-title>Evolución Histórica de Quórum</mat-card-title>
+        <mat-card-subtitle>Asistencia en las últimas asambleas de la comunidad</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="historial-list" *ngIf="stats.historialAsistencias && stats.historialAsistencias.length > 0; else noHistory">
+          <div class="historial-item" *ngFor="let item of stats.historialAsistencias">
+            <div class="item-header">
+              <div class="item-title">
+                <strong>{{ item.asambleaTitulo }}</strong>
+                <span class="item-date">{{ item.fecha }}</span>
+              </div>
+              <span class="badge" [ngClass]="item.quorumAlcanzado ? 'badge-success' : 'badge-danger'">
+                {{ item.quorumAlcanzado ? 'QUÓRUM ALCANZADO' : 'SIN QUÓRUM' }}
+              </span>
+            </div>
+
+            <div class="progress-container">
+              <div class="progress-bar-custom">
+                <div class="progress-fill" [style.width.%]="item.porcentajeAsistencia" [ngClass]="item.quorumAlcanzado ? 'fill-success' : 'fill-danger'"></div>
+              </div>
+              <div class="progress-info">
+                <span>{{ item.asistentes }} presentes / {{ item.habilitados }} habilitados</span>
+                <strong>{{ item.porcentajeAsistencia }}%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noHistory>
+          <div class="empty-state">
+            <mat-icon>event_busy</mat-icon>
+            <p>Aún no hay asambleas finalizadas registradas para el análisis histórico.</p>
+          </div>
+        </ng-template>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <a mat-button color="primary" routerLink="/reportes">
+          Ver Reportes Consolidados <mat-icon>arrow_forward</mat-icon>
+        </a>
+      </mat-card-actions>
+    </mat-card>
+
+  </div>
+
+</div>
