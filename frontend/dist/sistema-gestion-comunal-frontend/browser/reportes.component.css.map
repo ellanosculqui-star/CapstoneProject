@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/reportes/reportes.component.scss"],
-  "sourcesContent": [".print-actions {\n  display: flex;\n  justify-content: flex-end;\n  margin-bottom: 16px;\n}\n\n.tab-card {\n  border-radius: 12px;\n  .tab-content {\n    padding: 20px;\n  }\n}\n"],
-  "mappings": ";AAAA,CAAA;AACE,WAAA;AACA,mBAAA;AACA,iBAAA;;AAGF,CAAA;AACE,iBAAA;;AACA,CAFF,SAEE,CAAA;AACE,WAAA;;",
-  "names": []
-}

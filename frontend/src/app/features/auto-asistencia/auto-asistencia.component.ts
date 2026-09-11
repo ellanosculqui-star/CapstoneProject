@@ -1,4 +1,4 @@
-﻿import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -31,6 +31,8 @@ export class AutoAsistenciaComponent implements OnInit {
   pantalla: PantallaEstado = 'cargando';
   mensajeError: string = '';
   nombreComunero: string = '';
+  yaRegistradoEnEsteDispositivo: boolean = false;
+  dniRegistradoPrevio: string = '';
 
   private apiBase = environment.apiUrl;
 
@@ -48,8 +50,33 @@ export class AutoAsistenciaComponent implements OnInit {
         return;
       }
       this.asambleaId = +id;
+      this.verificarRegistroPrevioDispositivo();
       this.cargarAsamblea();
     });
+  }
+
+  private getDeviceId(): string {
+    let devId = localStorage.getItem('sgc_device_id');
+    if (!devId) {
+      devId = 'dev_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now().toString(36);
+      localStorage.setItem('sgc_device_id', devId);
+    }
+    return devId;
+  }
+
+  private verificarRegistroPrevioDispositivo(): void {
+    if (!this.asambleaId) return;
+    const registroPrevio = localStorage.getItem(`asistencia_asamblea_${this.asambleaId}`);
+    if (registroPrevio) {
+      try {
+        const datos = JSON.parse(registroPrevio);
+        this.yaRegistradoEnEsteDispositivo = true;
+        this.dniRegistradoPrevio = datos.dni || '';
+        this.nombreComunero = datos.nombre || '';
+      } catch (e) {
+        this.yaRegistradoEnEsteDispositivo = true;
+      }
+    }
   }
 
   cargarAsamblea(): void {
@@ -60,6 +87,9 @@ export class AutoAsistenciaComponent implements OnInit {
           this.asamblea = res.data ?? res;
           if (this.asamblea?.estado !== 'EN_CURSO') {
             this.pantalla = 'no_en_curso';
+          } else if (this.yaRegistradoEnEsteDispositivo) {
+            // Si ya se registró previamente desde este celular, mostrar directamente el estado de éxito
+            this.pantalla = 'exito';
           } else {
             this.pantalla = 'formulario';
           }
@@ -75,12 +105,37 @@ export class AutoAsistenciaComponent implements OnInit {
     if (!this.dni.trim() || this.dni.trim().length < 6) {
       return;
     }
+
+    // Doble verificación: Un celular = 1 registro
+    if (this.yaRegistradoEnEsteDispositivo && this.dni.trim() !== this.dniRegistradoPrevio) {
+      this.pantalla = 'error_registro';
+      this.mensajeError = 'Este dispositivo ya registró una asistencia previa para esta asamblea. Para evitar suplantaciones, cada comunero debe registrarse desde su propio teléfono o de forma presencial con la directiva.';
+      return;
+    }
+
+    const payload = {
+      dni: this.dni.trim(),
+      deviceId: this.getDeviceId()
+    };
+
     this.pantalla = 'enviando';
-    this.http.post<any>(`${this.apiBase}/publico/asambleas/${this.asambleaId}/asistencia`, { dni: this.dni.trim() })
+    this.http.post<any>(`${this.apiBase}/publico/asambleas/${this.asambleaId}/asistencia`, payload)
       .subscribe({
         next: res => {
           const data = res.data ?? res;
           this.nombreComunero = data?.comuneroNombreCompleto || '';
+          this.yaRegistradoEnEsteDispositivo = true;
+          this.dniRegistradoPrevio = this.dni.trim();
+
+          // Guardar bloqueo de dispositivo en localStorage
+          if (this.asambleaId) {
+            localStorage.setItem(`asistencia_asamblea_${this.asambleaId}`, JSON.stringify({
+              dni: this.dni.trim(),
+              nombre: this.nombreComunero,
+              fecha: new Date().toISOString()
+            }));
+          }
+
           this.pantalla = 'exito';
         },
         error: err => {

@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/usuarios/usuarios.component.scss"],
-  "sourcesContent": [".table-card {\n  border-radius: 12px;\n  position: relative;\n\n  .loading-shade {\n    position: absolute;\n    top: 0; left: 0; bottom: 0; right: 0;\n    background: rgba(255, 255, 255, 0.7);\n    z-index: 10;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n  }\n}\n\n.form-grid-2 {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  padding-top: 8px;\n}\n\n.form-grid-1 {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  padding-top: 8px;\n\n  .full-width {\n    width: 100%;\n  }\n}\n"],
-  "mappings": ";AAAA,CAAA;AACE,iBAAA;AACA,YAAA;;AAEA,CAJF,WAIE,CAAA;AACE,YAAA;AACA,OAAA;AAAQ,QAAA;AAAS,UAAA;AAAW,SAAA;AAC5B,cAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA;AACA,WAAA;AACA,WAAA;AACA,eAAA;AACA,mBAAA;;AAIJ,CAAA;AACE,WAAA;AACA,yBAAA,IAAA;AACA,OAAA;AACA,eAAA;;AAGF,CAAA;AACE,WAAA;AACA,kBAAA;AACA,OAAA;AACA,eAAA;;AAEA,CANF,YAME,CAAA;AACE,SAAA;;",
-  "names": []
-}

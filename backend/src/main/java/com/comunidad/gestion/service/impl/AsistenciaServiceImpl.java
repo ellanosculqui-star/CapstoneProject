@@ -143,6 +143,51 @@ public class AsistenciaServiceImpl implements AsistenciaService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public void marcarAusentesRestantes(Long asambleaId) {
+        Asamblea asamblea = asambleaRepository.findById(asambleaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Asamblea", "id", asambleaId));
+
+        List<Comunero> comunerosHabilitados = comuneroRepository.findAllHabilitados();
+        List<Asistencia> asistenciasExistentes = asistenciaRepository.findByAsambleaIdOrderByComuneroApellidosAscComuneroNombresAsc(asambleaId);
+
+        Set<Long> comunerosConRegistro = asistenciasExistentes.stream()
+                .map(a -> a.getComunero().getId())
+                .collect(Collectors.toSet());
+
+        Usuario currentUser = getUsuarioActual();
+        List<Asistencia> nuevosAusentes = new ArrayList<>();
+
+        for (Comunero c : comunerosHabilitados) {
+            if (!comunerosConRegistro.contains(c.getId())) {
+                nuevosAusentes.add(Asistencia.builder()
+                        .asamblea(asamblea)
+                        .comunero(c)
+                        .estado(EstadoAsistencia.AUSENTE)
+                        .observacion("Marcado AUSENTE automáticamente al finalizar la asamblea")
+                        .fechaHoraRegistro(LocalDateTime.now())
+                        .registradoPor(currentUser)
+                        .build());
+            }
+        }
+
+        if (!nuevosAusentes.isEmpty()) {
+            asistenciaRepository.saveAll(nuevosAusentes);
+            auditoriaService.registrarLog(
+                    currentUser != null ? currentUser.getUsername() : "SISTEMA",
+                    TipoAccionAuditoria.REGISTRAR_ASISTENCIA,
+                    "ASISTENCIA",
+                    "Marcado masivo de " + nuevosAusentes.size() + " ausentes por finalización de asamblea #" + asambleaId,
+                    "asistencias",
+                    asambleaId,
+                    null,
+                    "Ausentes automáticos registrados: " + nuevosAusentes.size(),
+                    "127.0.0.1"
+            );
+        }
+    }
+
     private Usuario getUsuarioActual() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
@@ -151,3 +196,4 @@ public class AsistenciaServiceImpl implements AsistenciaService {
         return null;
     }
 }
+

@@ -163,19 +163,126 @@
         <p class="content-text">{{ selectedActa.agenda }}</p>
       </div>
 
+      <div class="acta-section" *ngIf="selectedActa.acuerdos && selectedActa.acuerdos.length > 0">
+        <h3>3. Acuerdos Tomados en Asamblea</h3>
+        <div class="acuerdos-detalle-list">
+          <div class="acuerdo-row" *ngFor="let ac of selectedActa.acuerdos">
+            <span class="num">Acuerdo #{{ ac.numero }}:</span>
+            <span class="desc">{{ ac.descripcion }}</span>
+          </div>
+        </div>
+      </div>
+
       <div class="acta-section" *ngIf="selectedActa.resumen">
-        <h3>3. Acuerdos y Deliberación</h3>
+        <h3>4. Deliberación y Desarrollo</h3>
         <p class="content-text">{{ selectedActa.resumen }}</p>
+      </div>
+
+      <div class="acta-section votaciones-section" *ngIf="selectedActa.resultadosVotaciones">
+        <h3>5. Escrutinio y Elección de Representantes / Votaciones</h3>
+        <div class="votaciones-box">
+          <pre class="votaciones-content">{{ selectedActa.resultadosVotaciones }}</pre>
+        </div>
+      </div>
+
+      <!-- Sección de Comuneros que Firmaron el Acta -->
+      <div class="acta-section firmas-section">
+        <h3>6. Padrón de Comuneros Firmantes ({{ selectedActa.firmas?.length || 0 }} de {{ selectedActa.totalAsistentes }} presentes)</h3>
+        <div class="firmas-grid" *ngIf="selectedActa.firmas && selectedActa.firmas.length > 0">
+          <div class="firma-item" *ngFor="let f of selectedActa.firmas">
+            <div class="firma-head">
+              <strong>{{ f.comuneroNombreCompleto }}</strong>
+              <span>DNI: {{ f.comuneroDni }}</span>
+            </div>
+            <div class="firma-trazo" *ngIf="f.trazoFirma">
+              <img [src]="f.trazoFirma" alt="Firma">
+            </div>
+            <div class="firma-digital-badge" *ngIf="!f.trazoFirma">
+              <span class="check">✓</span> Conformidad Digital Registrada
+            </div>
+            <span class="firma-hora">{{ f.fechaHoraFirma | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+        </div>
+        <div *ngIf="!selectedActa.firmas || selectedActa.firmas.length === 0" class="sin-firmas">
+          <p>Ningún comunero ha firmado aún mediante el código QR de la asamblea.</p>
+        </div>
       </div>
     </div>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
-    <button mat-raised-button color="accent"
+    <button mat-raised-button color="accent" class="no-print"
             *ngIf="selectedActa?.estado === 'BORRADOR' || selectedActa?.estado === 'OBSERVADA'"
             (click)="firmarYAprobarActa(selectedActa)">
       <mat-icon>draw</mat-icon> Firmar y Aprobar Acta
     </button>
-    <button mat-stroked-button (click)="imprimirActa(selectedActa)"><mat-icon>print</mat-icon> Imprimir</button>
-    <button mat-raised-button color="primary" mat-dialog-close>Cerrar</button>
+    <button mat-stroked-button class="no-print" (click)="imprimirActa(selectedActa)"><mat-icon>print</mat-icon> Imprimir</button>
+    <button mat-raised-button color="primary" class="no-print" mat-dialog-close>Cerrar</button>
   </mat-dialog-actions>
-</ng-template>
+  </ng-template>
+
+  <!-- Printable template used for printing full acta -->
+  <ng-template #printableActa>
+    <div class="acta-view printable">
+      <div class="acta-header-info">
+        <p><strong>Asamblea:</strong> {{ selectedActa?.asambleaTitulo }}</p>
+        <p><strong>Fecha y Lugar:</strong> {{ selectedActa?.fecha }} — {{ selectedActa?.lugar }}</p>
+        <p><strong>Responsable / Secretario:</strong> {{ selectedActa?.responsableNombre }}</p>
+        <p><strong>Estado:</strong> <span [class]="selectedActa?.estado | estadoBadge">{{ selectedActa?.estado }}</span></p>
+      </div>
+
+      <div class="acta-section">
+        <h3>1. Asistencia y Quórum Computado</h3>
+        <p>Habilitados: <strong>{{ selectedActa?.totalHabilitados }}</strong> | Asistentes: <strong>{{ selectedActa?.totalAsistentes }}</strong> | Ausentes: <strong>{{ selectedActa?.totalAusentes }}</strong></p>
+        <p>Porcentaje Asistencia: <strong>{{ selectedActa?.porcentajeAsistencia }}%</strong> (Quórum {{ selectedActa?.quorumAlcanzado ? 'Alcanzado' : 'No Alcanzado' }})</p>
+      </div>
+
+      <div class="acta-section">
+        <h3>2. Agenda Tratada</h3>
+        <p class="content-text">{{ selectedActa?.agenda }}</p>
+      </div>
+
+      <div class="acta-section" *ngIf="selectedActa?.acuerdos && selectedActa?.acuerdos.length > 0">
+        <h3>3. Acuerdos Tomados en Asamblea</h3>
+        <div class="acuerdos-detalle-list">
+          <div class="acuerdo-row" *ngFor="let ac of selectedActa?.acuerdos">
+            <span class="num">Acuerdo #{{ ac.numero }}:</span>
+            <span class="desc">{{ ac.descripcion }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="acta-section" *ngIf="selectedActa?.resumen">
+        <h3>4. Deliberación y Desarrollo</h3>
+        <p class="content-text">{{ selectedActa?.resumen }}</p>
+      </div>
+
+      <div class="acta-section votaciones-section" *ngIf="selectedActa?.resultadosVotaciones">
+        <h3>5. Escrutinio y Elección de Representantes / Votaciones</h3>
+        <div class="votaciones-box">
+          <pre class="votaciones-content">{{ selectedActa?.resultadosVotaciones }}</pre>
+        </div>
+      </div>
+
+      <div class="acta-section firmas-section" *ngIf="selectedActa?.firmas && selectedActa?.firmas.length > 0">
+        <h3>6. Padrón de Comuneros Firmantes ({{ selectedActa?.firmas?.length || 0 }} de {{ selectedActa?.totalAsistentes }} presentes)</h3>
+        <div class="firmas-grid">
+          <div class="firma-item" *ngFor="let f of selectedActa?.firmas">
+            <div class="firma-head">
+              <strong>{{ f.comuneroNombreCompleto }}</strong>
+              <span>DNI: {{ f.comuneroDni }}</span>
+            </div>
+            <div class="firma-trazo" *ngIf="f.trazoFirma">
+              <img [src]="f.trazoFirma" alt="Firma">
+            </div>
+            <div class="firma-digital-badge" *ngIf="!f.trazoFirma">
+              <span class="check">✓</span> Conformidad Digital Registrada
+            </div>
+            <span class="firma-hora">{{ f.fechaHoraFirma | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="acta-section" *ngIf="(!selectedActa?.firmas || selectedActa?.firmas.length === 0)">
+        <p>Ningún comunero ha firmado aún mediante el código QR de la asamblea.</p>
+      </div>
+    </div>
+  </ng-template>

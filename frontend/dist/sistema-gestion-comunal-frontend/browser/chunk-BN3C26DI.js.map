@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/core/services/loading.service.ts"],
-  "sourcesContent": ["import { Injectable } from '@angular/core';\nimport { BehaviorSubject } from 'rxjs';\n\n@Injectable({\n  providedIn: 'root'\n})\nexport class LoadingService {\n  private loadingSubject = new BehaviorSubject<boolean>(false);\n  public loading$ = this.loadingSubject.asObservable();\n  private requestCount = 0;\n\n  show(): void {\n    this.requestCount++;\n    this.loadingSubject.next(true);\n  }\n\n  hide(): void {\n    this.requestCount--;\n    if (this.requestCount <= 0) {\n      this.requestCount = 0;\n      this.loadingSubject.next(false);\n    }\n  }\n}\n"],
-  "mappings": ";;;;;;AAMM,IAAO,iBAAP,MAAO,gBAAc;EAH3B,cAAA;AAIU,SAAA,iBAAiB,IAAI,gBAAyB,KAAK;AACpD,SAAA,WAAW,KAAK,eAAe,aAAY;AAC1C,SAAA,eAAe;;EAEvB,OAAI;AACF,SAAK;AACL,SAAK,eAAe,KAAK,IAAI;EAC/B;EAEA,OAAI;AACF,SAAK;AACL,QAAI,KAAK,gBAAgB,GAAG;AAC1B,WAAK,eAAe;AACpB,WAAK,eAAe,KAAK,KAAK;IAChC;EACF;;;uCAhBW,iBAAc;IAAA;EAAA;;4EAAd,iBAAc,SAAd,gBAAc,WAAA,YAFb,OAAM,CAAA;EAAA;;",
-  "names": []
-}

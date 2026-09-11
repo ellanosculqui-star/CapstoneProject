@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/shared/pipes/soles.pipe.ts"],
-  "sourcesContent": ["import { Pipe, PipeTransform } from '@angular/core';\n\n@Pipe({\n  name: 'soles',\n  standalone: true\n})\nexport class SolesPipe implements PipeTransform {\n  transform(value: number | string | null | undefined): string {\n    if (value === null || value === undefined) return 'S/ 0.00';\n    const num = typeof value === 'string' ? parseFloat(value) : value;\n    if (isNaN(num)) return 'S/ 0.00';\n    return `S/ ${num.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;\n  }\n}\n"],
-  "mappings": ";;;;;AAMM,IAAO,YAAP,MAAO,WAAS;EACpB,UAAU,OAAyC;AACjD,QAAI,UAAU,QAAQ,UAAU;AAAW,aAAO;AAClD,UAAM,MAAM,OAAO,UAAU,WAAW,WAAW,KAAK,IAAI;AAC5D,QAAI,MAAM,GAAG;AAAG,aAAO;AACvB,WAAO,MAAM,IAAI,eAAe,SAAS,EAAE,uBAAuB,GAAG,uBAAuB,EAAC,CAAE,CAAC;EAClG;;;uCANW,YAAS;IAAA;EAAA;;oFAAT,YAAS,MAAA,MAAA,YAAA,KAAA,CAAA;EAAA;;",
-  "names": []
-}

@@ -1,0 +1,138 @@
+<!-- Pantalla: Cargando -->
+<div *ngIf="pantalla === 'cargando'" class="page-wrapper">
+  <div class="card-central">
+    <div class="spinner"></div>
+    <p class="cargando-txt">Cargando información del acta comunal...</p>
+  </div>
+</div>
+
+<!-- Pantalla: Error al cargar -->
+<div *ngIf="pantalla === 'error_carga'" class="page-wrapper">
+  <div class="card-central card-error">
+    <div class="icono-estado">&#9888;</div>
+    <h2>Enlace de Firma Inválido</h2>
+    <p>{{ mensajeError }}</p>
+  </div>
+</div>
+
+<!-- Pantalla: Formulario de Firma del Acta -->
+<div *ngIf="pantalla === 'formulario'" class="page-wrapper">
+  <div class="card-central">
+    <div class="header-comunidad">
+      <div class="logo-comunidad">&#128220;</div>
+      <div>
+        <h1 class="titulo-comunidad">Firma Digital del Acta</h1>
+        <p class="subtitulo-comunidad">Comunidad Campesina La Encañada</p>
+      </div>
+    </div>
+
+    <!-- Resumen del Acta -->
+    <div class="asamblea-info" *ngIf="acta">
+      <div class="badge-acta"><span class="punto-verde"></span> ACTA N° {{ acta.numeroActa }}</div>
+      <h2 class="asamblea-titulo">{{ acta.asambleaTitulo }}</h2>
+      <div class="meta-row">
+        <span>&#128197; {{ acta.fecha }}</span>
+        <span>&#128205; {{ acta.lugar }}</span>
+      </div>
+
+      <div class="agenda-bloque" *ngIf="acta.agenda">
+        <span class="sub-label">Agenda Tratada:</span>
+        <p class="agenda-txt">{{ acta.agenda }}</p>
+      </div>
+
+      <!-- Acuerdos Registrados en el Acta -->
+      <div class="acuerdos-bloque" *ngIf="acta.acuerdos && acta.acuerdos.length > 0">
+        <span class="sub-label">Acuerdos del Acta a Firmar:</span>
+        <div class="acuerdos-lista">
+          <div class="acuerdo-item" *ngFor="let ac of acta.acuerdos">
+            <span class="acuerdo-num">#{{ ac.numero }}</span>
+            <span class="acuerdo-desc">{{ ac.descripcion }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulario de Firma -->
+    <div class="formulario-firma">
+      <div class="input-grupo">
+        <label for="dniFirma">Ingresa tu número de DNI</label>
+        <input
+          id="dniFirma"
+          type="text"
+          inputmode="numeric"
+          [(ngModel)]="dni"
+          placeholder="Ej: 12345678"
+          class="input-dni"
+          maxlength="8"
+          autofocus
+        />
+        <span class="hint-input">Solo se aceptará si marcaste asistencia como <strong>PRESENTE</strong>.</span>
+      </div>
+
+      <!-- Lienzo para firma táctil opcional -->
+      <div class="canvas-seccion">
+        <div class="canvas-header">
+          <label>Firma / Rúbrica en Pantalla (Dibuja con tu dedo)</label>
+          <button type="button" class="btn-limpiar" (click)="limpiarFirma()">&#128465; Borrar</button>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas
+            #signatureCanvas
+            width="340"
+            height="140"
+            class="signature-pad"
+            (mousedown)="startDrawing($event)"
+            (mousemove)="draw($event)"
+            (mouseup)="stopDrawing()"
+            (mouseleave)="stopDrawing()"
+            (touchstart)="startDrawing($event)"
+            (touchmove)="draw($event)"
+            (touchend)="stopDrawing()"
+          ></canvas>
+        </div>
+      </div>
+
+      <button class="btn-firmar" (click)="firmarActa()" [disabled]="!dni || dni.length !== 8">
+        &#10003; Confirmar y Firmar Acta
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Pantalla: Enviando -->
+<div *ngIf="pantalla === 'enviando'" class="page-wrapper">
+  <div class="card-central">
+    <div class="spinner"></div>
+    <p class="cargando-txt">Validando asistencia y registrando firma...</p>
+  </div>
+</div>
+
+<!-- Pantalla: Éxito -->
+<div *ngIf="pantalla === 'exito'" class="page-wrapper">
+  <div class="card-central card-exito">
+    <div class="icono-exito">&#10004;</div>
+    <h2>¡Acta Firmada Exitosamente!</h2>
+    <p *ngIf="comuneroConfirmado?.comuneroNombreCompleto" class="nombre-comunero">
+      {{ comuneroConfirmado.comuneroNombreCompleto }}
+    </p>
+    <p class="dni-confirmado">DNI: {{ comuneroConfirmado?.comuneroDni || dni }}</p>
+    <p class="mensaje-exito">
+      Tu firma y conformidad han quedado incorporadas formalmente en el <strong>Acta N° {{ acta?.numeroActa }}</strong> de la asamblea comunal.
+    </p>
+    <div class="badge-registrado">
+      &#128196; Incorporado en el Padrón Oficial de Firmantes
+    </div>
+  </div>
+</div>
+
+<!-- Pantalla: Error al registrar -->
+<div *ngIf="pantalla === 'error_registro'" class="page-wrapper">
+  <div class="card-central card-error">
+    <div class="icono-estado">&#10060;</div>
+    <h2>No se pudo registrar la firma</h2>
+    <p class="error-detalle">{{ mensajeError }}</p>
+    <button class="btn-reintentar" (click)="reintentar()">
+      &#8635; Intentar de nuevo
+    </button>
+  </div>
+</div>

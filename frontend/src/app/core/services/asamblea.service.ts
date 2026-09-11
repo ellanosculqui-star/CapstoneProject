@@ -16,6 +16,11 @@ export interface AsambleaResponse {
   estado: string;
   quorumMinimoPct: number;
   totalHabilitadosCorte?: number;
+  totalAsistentes?: number;
+  totalAusentes?: number;
+  totalJustificados?: number;
+  porcentajeAsistencia?: number;
+  quorumAlcanzado?: boolean;
   multasGeneradas: boolean;
   fechaCreacion?: string;
   fechaModificacion?: string;

@@ -76,6 +76,27 @@ public class ActaController {
         return ResponseEntity.ok(ApiResponse.success("Acta aprobada formalmente", response));
     }
 
+    @PostMapping("/{id}/acuerdos")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SECRETARIO')")
+    @Operation(summary = "Registrar un acuerdo en tiempo real durante la asamblea")
+    public ResponseEntity<ApiResponse<ActaResponse>> agregarAcuerdo(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String descripcion = body.get("descripcion");
+        ActaResponse response = actaService.agregarAcuerdo(id, descripcion);
+        return ResponseEntity.ok(ApiResponse.success("Acuerdo registrado exitosamente", response));
+    }
+
+    @DeleteMapping("/{id}/acuerdos/{acuerdoId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'SECRETARIO')")
+    @Operation(summary = "Eliminar un acuerdo del acta")
+    public ResponseEntity<ApiResponse<Void>> eliminarAcuerdo(
+            @PathVariable Long id,
+            @PathVariable Long acuerdoId) {
+        actaService.eliminarAcuerdo(id, acuerdoId);
+        return ResponseEntity.ok(ApiResponse.success("Acuerdo eliminado", null));
+    }
+
     @GetMapping
     @Operation(summary = "Listar actas registradas con filtros de estado, fechas y búsqueda")
     public ResponseEntity<ApiResponse<PagedResponse<ActaResponse>>> listarActas(

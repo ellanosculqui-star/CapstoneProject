@@ -20,7 +20,15 @@ public interface ActaService {
 
     ActaResponse generarBorradorAutomatico(Long asambleaId);
 
+    ActaResponse crearOActualizarActaDeAsamblea(Long asambleaId);
+
     ActaResponse aprobarActa(Long id);
+
+    ActaResponse agregarAcuerdo(Long actaId, String descripcion);
+
+    void eliminarAcuerdo(Long actaId, Long acuerdoId);
+
+    com.comunidad.gestion.dto.acta.FirmaActaDto registrarFirmaComunero(Long actaId, String dni, String trazoFirma, String dispositivo, String ip);
 
     PagedResponse<ActaResponse> listarActas(String busqueda,
                                            EstadoActa estado,

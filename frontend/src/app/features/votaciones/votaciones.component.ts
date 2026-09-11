@@ -1,6 +1,6 @@
 import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, FormControl, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -109,17 +109,26 @@ export class VotacionesComponent implements OnInit {
       titulo: ['', [Validators.required, Validators.minLength(4)]],
       propuesta: ['', [Validators.required, Validators.minLength(5)]],
       descripcion: [''],
-      tipo: ['MAYORIA_SIMPLE', Validators.required]
+      tipo: ['MAYORIA_SIMPLE', Validators.required],
+      candidatos: this.fb.array([this.fb.control(''), this.fb.control('')])
     });
   }
 
+  get candidatosFormArray(): FormArray {
+    return this.votacionForm.get('candidatos') as FormArray;
+  }
+
+  getCandidatoControl(index: number): FormControl {
+    return this.candidatosFormArray.at(index) as FormControl;
+  }
+
   agregarCandidatoInput(): void {
-    this.candidatosLista.push('');
+    this.candidatosFormArray.push(this.fb.control(''));
   }
 
   removerCandidatoInput(index: number): void {
-    if (this.candidatosLista.length > 1) {
-      this.candidatosLista.splice(index, 1);
+    if (this.candidatosFormArray.length > 2) {
+      this.candidatosFormArray.removeAt(index);
     }
   }
 
@@ -128,12 +137,28 @@ export class VotacionesComponent implements OnInit {
   }
 
   cargarAsambleas(): void {
-    this.asambleaService.listar(0, 50).subscribe({
+    this.asambleaService.listar(0, 100).subscribe({
       next: (res) => {
         if (res.success && res.data && res.data.content) {
-          this.asambleas = res.data.content;
-          if (this.asambleas.length > 0) {
-            this.selectedAsambleaId = this.asambleas[0].id;
+          const todas = res.data.content;
+          // Filtrar: Ocultar asambleas FINALIZADAS y CANCELADAS
+          // Priorizar asambleas EN_CURSO
+          const activas = todas.filter(a => a.estado === 'EN_CURSO');
+          const programadas = todas.filter(a => a.estado === 'PROGRAMADA');
+
+          if (activas.length > 0) {
+            this.asambleas = activas;
+            this.selectedAsambleaId = activas[0].id;
+          } else if (programadas.length > 0) {
+            // Si aún no se inició ninguna, permitir ver programadas para poder iniciarlas
+            this.asambleas = programadas;
+            this.selectedAsambleaId = programadas[0].id;
+          } else {
+            this.asambleas = [];
+            this.selectedAsambleaId = null;
+          }
+
+          if (this.selectedAsambleaId) {
             this.cargarVotaciones();
             this.cargarPadronAsistentes();
           }
@@ -171,9 +196,44 @@ export class VotacionesComponent implements OnInit {
     });
   }
 
+  iniciarAsambleaActual(): void {
+    if (!this.selectedAsambleaId) return;
+    this.asambleaService.cambiarEstado(this.selectedAsambleaId, 'EN_CURSO').subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.notify.success('¡Asamblea iniciada con éxito! Ya se encuentra EN CURSO.');
+          // Actualizar estado local
+          const asamb = this.asambleas.find(a => a.id === this.selectedAsambleaId);
+          if (asamb) asamb.estado = 'EN_CURSO';
+        }
+      },
+      error: (err) => {
+        this.notify.error(err.error?.message || 'Error al iniciar la asamblea');
+      }
+    });
+  }
+
   onAsambleaChange(): void {
     this.cargarVotaciones();
     this.cargarPadronAsistentes();
+  }
+
+  esFormularioValido(): boolean {
+    if (!this.votacionForm) return false;
+    const tipo = this.votacionForm.get('tipo')?.value;
+    const titulo = this.votacionForm.get('titulo')?.value;
+
+    if (!titulo || titulo.trim().length < 3) return false;
+
+    if (tipo === 'ELECCION_REPRESENTANTE') {
+      const validCands = this.candidatosFormArray.controls
+        .map(c => (c.value || '').trim())
+        .filter(c => c.length > 0);
+      return validCands.length >= 2;
+    } else {
+      const propuesta = this.votacionForm.get('propuesta')?.value;
+      return !!propuesta && propuesta.trim().length >= 4;
+    }
   }
 
   abrirCrearModal(): void {
@@ -181,34 +241,79 @@ export class VotacionesComponent implements OnInit {
       this.notify.warning('Seleccione una asamblea primero');
       return;
     }
-    this.candidatosLista = ['', ''];
-    this.votacionForm.reset({ tipo: 'MAYORIA_SIMPLE' });
-    this.dialogRef = this.dialog.open(this.crearModal, { width: '620px' });
+    this.candidatosFormArray.clear();
+    this.candidatosFormArray.push(this.fb.control(''));
+    this.candidatosFormArray.push(this.fb.control(''));
+    this.votacionForm.reset({
+      titulo: '',
+      propuesta: '',
+      descripcion: '',
+      tipo: 'MAYORIA_SIMPLE'
+    });
+    this.dialogRef = this.dialog.open(this.crearModal, {
+      width: '640px',
+      maxHeight: '90vh'
+    });
   }
 
   guardarVotacion(): void {
-    if (this.votacionForm.invalid || !this.selectedAsambleaId) {
-      this.votacionForm.markAllAsTouched();
+    if (!this.esFormularioValido() || !this.selectedAsambleaId) {
+      this.notify.warning('Por favor complete los campos requeridos');
       return;
     }
 
-    const req: CrearVotacionRequest = { ...this.votacionForm.value };
+    const formVal = this.votacionForm.value;
+    const req: CrearVotacionRequest = {
+      titulo: formVal.titulo?.trim(),
+      propuesta: formVal.propuesta?.trim() || `Elección democrática de representantes comunales`,
+      descripcion: formVal.descripcion?.trim() || '',
+      tipo: formVal.tipo
+    };
+
     if (req.tipo === 'ELECCION_REPRESENTANTE') {
-      const validCands = this.candidatosLista.map(c => c.trim()).filter(c => c.length > 0);
+      const validCands = this.candidatosFormArray.controls
+        .map(c => (c.value || '').trim())
+        .filter(c => c.length > 0);
+
       if (validCands.length < 2) {
         this.notify.warning('Debe registrar al menos 2 candidatos para la elección');
         return;
       }
       req.candidatos = validCands;
+      if (!req.propuesta || req.propuesta.trim().length === 0) {
+        req.propuesta = `Elección entre candidatos: ${validCands.join(', ')}`;
+      }
     }
 
     this.votacionService.crear(this.selectedAsambleaId, req).subscribe({
       next: (res) => {
-        if (res.success) {
-          this.notify.success('Propuesta de votación registrada exitosamente');
+        if (res.success && res.data) {
+          const nuevaVotacion = res.data;
+          this.notify.success('Votación registrada exitosamente. Abriendo proceso electoral...');
           this.dialogRef?.close();
-          this.cargarVotaciones();
+
+          // Abrir automáticamente la votación creada para que quede activa de inmediato
+          this.votacionService.abrir(nuevaVotacion.id).subscribe({
+            next: (openRes) => {
+              if (openRes.success) {
+                this.notify.success('¡Votación ABIERTA! Se ha generado el código QR y la cédula digital.');
+                this.cargarVotaciones();
+                // Mostrar de inmediato el modal QR de la votación
+                setTimeout(() => {
+                  this.abrirModalQrVotacion(openRes.data);
+                }, 400);
+              } else {
+                this.cargarVotaciones();
+              }
+            },
+            error: () => {
+              this.cargarVotaciones();
+            }
+          });
         }
+      },
+      error: (err) => {
+        this.notify.error(err.error?.message || 'Error al crear la votación');
       }
     });
   }

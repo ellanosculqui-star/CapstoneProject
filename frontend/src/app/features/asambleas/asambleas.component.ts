@@ -12,7 +12,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDialogModule, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatBadgeModule } from '@angular/material/badge';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { AsambleaService, AsambleaResponse, AsambleaRequest } from '../../core/services/asamblea.service';
+import { AsistenciaService, QuorumResponse, AsistenciaPadronDto } from '../../core/services/asistencia.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { EstadoBadgePipe } from '../../shared/pipes/estado-badge.pipe';
@@ -35,6 +42,9 @@ import { EstadoBadgePipe } from '../../shared/pipes/estado-badge.pipe';
     MatDialogModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
+    MatChipsModule,
+    MatBadgeModule,
     PageHeaderComponent,
     EstadoBadgePipe
   ],
@@ -56,15 +66,28 @@ export class AsambleasComponent implements OnInit {
   asambleaForm!: FormGroup;
   selectedAsamblea: AsambleaResponse | null = null;
   dialogRef?: MatDialogRef<any>;
+  fechaMinima: string = new Date().toISOString().substring(0, 10);
+
+  // Detalle y Asistencia
+  quorumDetalle: QuorumResponse | null = null;
+  padronDetalle: AsistenciaPadronDto[] = [];
+  padronFiltrado: AsistenciaPadronDto[] = [];
+  filtroAsistencia: string = 'TODOS';
+  loadingDetalle = false;
+  actaAsociada: any = null;
 
   constructor(
     private asambleaService: AsambleaService,
+    private asistenciaService: AsistenciaService,
     private notify: NotificationService,
     private fb: FormBuilder,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private http: HttpClient,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.fechaMinima = new Date().toISOString().substring(0, 10);
     this.initForm();
     this.cargarAsambleas();
   }
@@ -74,7 +97,7 @@ export class AsambleasComponent implements OnInit {
       titulo: ['', [Validators.required]],
       agenda: ['', [Validators.required]],
       tipo: ['ORDINARIA', [Validators.required]],
-      fecha: ['', [Validators.required]],
+      fecha: [this.fechaMinima, [Validators.required]],
       horaInicio: ['09:00', [Validators.required]],
       horaFin: ['13:00'],
       lugar: ['Local Comunal', [Validators.required]],
@@ -99,8 +122,10 @@ export class AsambleasComponent implements OnInit {
   }
 
   abrirCrearModal(): void {
+    this.fechaMinima = new Date().toISOString().substring(0, 10);
     this.asambleaForm.reset({
       tipo: 'ORDINARIA',
+      fecha: this.fechaMinima,
       horaInicio: '09:00',
       horaFin: '13:00',
       lugar: 'Local Comunal Principal',
@@ -111,7 +136,74 @@ export class AsambleasComponent implements OnInit {
 
   verDetalle(asamblea: AsambleaResponse): void {
     this.selectedAsamblea = asamblea;
-    this.dialog.open(this.detalleDialog, { width: '500px' });
+    this.quorumDetalle = null;
+    this.padronDetalle = [];
+    this.padronFiltrado = [];
+    this.actaAsociada = null;
+    this.filtroAsistencia = 'TODOS';
+    this.loadingDetalle = true;
+
+    this.dialog.open(this.detalleDialog, { width: '850px', maxHeight: '90vh' });
+
+    // Obtener Quorum y estadísticas
+    this.asistenciaService.calcularQuorum(asamblea.id).subscribe({
+      next: (qRes) => {
+        if (qRes.success && qRes.data) {
+          this.quorumDetalle = qRes.data;
+        }
+      }
+    });
+
+    // Obtener Acta asociada a la asamblea
+    this.http.get<any>(`${environment.apiUrl}/actas/asamblea/${asamblea.id}`).subscribe({
+      next: (aRes) => {
+        if (aRes.success && aRes.data) {
+          this.actaAsociada = aRes.data;
+        }
+      },
+      error: () => {
+        // Si aún no existe creada en BD, consultar borrador automático para mostrarla integrada
+        this.http.get<any>(`${environment.apiUrl}/actas/asamblea/${asamblea.id}/borrador-automatico`).subscribe({
+          next: (bRes) => {
+            if (bRes.success && bRes.data) {
+              this.actaAsociada = bRes.data;
+            }
+          }
+        });
+      }
+    });
+
+    // Obtener Padrón completo con estados
+    this.asistenciaService.obtenerPadron(asamblea.id).subscribe({
+      next: (pRes) => {
+        if (pRes.success && pRes.data) {
+          this.padronDetalle = pRes.data;
+          this.filtrarPadron();
+        }
+        this.loadingDetalle = false;
+      },
+      error: () => {
+        this.loadingDetalle = false;
+      }
+    });
+  }
+
+  irAActas(): void {
+    this.dialog.closeAll();
+    this.router.navigate(['/actas']);
+  }
+
+  filtrarPadron(filtro?: string): void {
+    if (filtro) {
+      this.filtroAsistencia = filtro;
+    }
+    if (this.filtroAsistencia === 'TODOS') {
+      this.padronFiltrado = [...this.padronDetalle];
+    } else if (this.filtroAsistencia === 'PENDIENTE') {
+      this.padronFiltrado = this.padronDetalle.filter(p => !p.estadoAsistencia);
+    } else {
+      this.padronFiltrado = this.padronDetalle.filter(p => p.estadoAsistencia === this.filtroAsistencia);
+    }
   }
 
   guardarAsamblea(): void {
@@ -121,10 +213,16 @@ export class AsambleasComponent implements OnInit {
     }
 
     const req: AsambleaRequest = this.asambleaForm.value;
+    const hoy = new Date().toISOString().substring(0, 10);
+    if (req.fecha < hoy) {
+      this.notify.error('No se puede programar una asamblea para una fecha anterior a hoy (' + hoy + ').');
+      return;
+    }
+
     this.asambleaService.crear(req).subscribe({
       next: (res) => {
         if (res.success) {
-          this.notify.success('Asamblea convocada exitosamente');
+          this.notify.success('Asamblea convocada y acta borrador asociada exitosamente');
           this.dialogRef?.close();
           this.cargarAsambleas();
         }

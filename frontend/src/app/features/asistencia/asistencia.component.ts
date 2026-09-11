@@ -15,6 +15,8 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatBadgeModule } from '@angular/material/badge';
 import { Subscription } from 'rxjs';
 
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { AsistenciaService, AsistenciaPadronDto, QuorumResponse } from '../../core/services/asistencia.service';
 import { AsambleaService, AsambleaResponse } from '../../core/services/asamblea.service';
 import { OfflineAsistenciaService, AsistenciaOfflineItem } from '../../core/services/offline-asistencia.service';
@@ -68,6 +70,15 @@ export class AsistenciaComponent implements OnInit, OnDestroy {
   isOnline = true;
   pendingOfflineCount = 0;
   private subs = new Subscription();
+  private pollingTimer: any = null;
+
+  // Integración con Acta Oficial y Firma
+  @ViewChild('actaCuadernoDialog') actaCuadernoDialog!: TemplateRef<any>;
+  @ViewChild('qrFirmaDialog') qrFirmaDialog!: TemplateRef<any>;
+
+  actaAsociada: any = null;
+  nuevoAcuerdoTexto: string = '';
+  guardandoAcuerdo: boolean = false;
 
   constructor(
     private asistenciaService: AsistenciaService,
@@ -75,7 +86,8 @@ export class AsistenciaComponent implements OnInit, OnDestroy {
     public offlineService: OfflineAsistenciaService,
     private notify: NotificationService,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -92,30 +104,87 @@ export class AsistenciaComponent implements OnInit, OnDestroy {
     );
 
     this.cargarAsambleas();
+    this.iniciarAutoRefresco();
   }
 
   ngOnDestroy(): void {
     this.subs.unsubscribe();
+    this.detenerAutoRefresco();
+  }
+
+  iniciarAutoRefresco(): void {
+    this.detenerAutoRefresco();
+    // Refresco silencioso cada 3 segundos para reflejar en tiempo real registros por QR
+    this.pollingTimer = setInterval(() => {
+      if (this.selectedAsambleaId && this.selectedAsamblea?.estado === 'EN_CURSO' && this.isOnline) {
+        this.refrescarSilencioso();
+      }
+    }, 3000);
+  }
+
+  detenerAutoRefresco(): void {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
+    }
+  }
+
+  refrescarSilencioso(): void {
+    if (!this.selectedAsambleaId) return;
+
+    this.asistenciaService.obtenerPadron(this.selectedAsambleaId, true).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          // Actualizar en el mismo objeto sin re-renderizar toda la tabla si no hubo cambios
+          const nuevos = res.data;
+          let huboCambios = false;
+
+          nuevos.forEach(nuevo => {
+            const actual = this.padron.find(p => p.comuneroId === nuevo.comuneroId);
+            if (actual && actual.estadoAsistencia !== nuevo.estadoAsistencia) {
+              actual.estadoAsistencia = nuevo.estadoAsistencia;
+              huboCambios = true;
+            }
+          });
+
+          if (huboCambios || this.padron.length !== nuevos.length) {
+            this.aplicarFiltro();
+            this.actualizarQuorumSilencioso();
+          }
+        }
+      }
+    });
+  }
+
+  actualizarQuorumSilencioso(): void {
+    if (!this.selectedAsambleaId) return;
+    this.asistenciaService.calcularQuorum(this.selectedAsambleaId, true).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.quorumInfo = res.data;
+        }
+      }
+    });
   }
 
   cargarAsambleas(): void {
     this.asambleaService.listar(0, 50).subscribe({
       next: (res) => {
-        if (res.success && res.data) {
-          this.asambleas = res.data.content;
-          // Priorizar asamblea en curso
-          const enCurso = this.asambleas.find(a => a.estado === 'EN_CURSO');
-          if (enCurso) {
-            this.selectedAsambleaId = enCurso.id;
-            this.selectedAsamblea = enCurso;
-          } else if (this.asambleas.length > 0) {
+          const todas = res.data.content;
+          const activas = todas.filter(a => a.estado === 'EN_CURSO');
+          const programadas = todas.filter(a => a.estado === 'PROGRAMADA');
+
+          this.asambleas = activas.length > 0 ? activas : programadas;
+          if (this.asambleas.length > 0) {
             this.selectedAsambleaId = this.asambleas[0].id;
             this.selectedAsamblea = this.asambleas[0];
+          } else {
+            this.selectedAsambleaId = null;
+            this.selectedAsamblea = null;
           }
           if (this.selectedAsambleaId) {
             this.cargarPadronYQuorum();
           }
-        }
       }
     });
   }
@@ -207,6 +276,11 @@ export class AsistenciaComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Actualización instantánea (Optimistic UI) para máxima velocidad de clic
+    const estadoAnterior = comunero.estadoAsistencia;
+    comunero.estadoAsistencia = estado;
+    this.recalcularQuorumLocal();
+
     if (!this.isOnline) {
       // Guardar en cola offline
       this.offlineService.guardarOffline(
@@ -215,36 +289,31 @@ export class AsistenciaComponent implements OnInit, OnDestroy {
         estado,
         comunero.nombreCompleto
       );
-      comunero.estadoAsistencia = estado;
-      this.notify.warning(`[MODO OFFLINE] Asistencia de ${comunero.nombreCompleto} guardada localmente.`);
-      this.recalcularQuorumLocal();
       return;
     }
 
-    // Modo Online regular
+    // Guardado silencioso en segundo plano sin bloquear con notificaciones ni spinners
     this.asistenciaService.registrar(
       this.selectedAsambleaId,
       comunero.comuneroId,
-      estado
+      estado,
+      undefined,
+      true
     ).subscribe({
       next: (res) => {
         if (res.success) {
-          comunero.estadoAsistencia = estado;
-          this.notify.success(`Asistencia de ${comunero.nombreCompleto} registrada (${estado})`);
-          this.actualizarQuorum();
+          this.actualizarQuorumSilencioso();
         }
       },
       error: () => {
-        // En caso de fallo de red, recurrir a offline
+        // En caso de fallo de red, recurrir a offline y avisar
         this.offlineService.guardarOffline(
           this.selectedAsambleaId!,
           comunero.comuneroId,
           estado,
           comunero.nombreCompleto
         );
-        comunero.estadoAsistencia = estado;
-        this.notify.warning(`Error de red: guardado localmente en modo offline.`);
-        this.recalcularQuorumLocal();
+        this.notify.warning(`Sin conexión: se guardó localmente para sincronizar luego.`);
       }
     });
   }
@@ -354,5 +423,101 @@ export class AsistenciaComponent implements OnInit, OnDestroy {
 
   navegarA(ruta: string): void {
     this.router.navigate([ruta]);
+  }
+
+  // --- Funcionalidades del Acta en Vivo y Firma Colectiva ---
+  abrirCuadernoActa(): void {
+    if (!this.selectedAsambleaId) return;
+    this.cargarActaAsociada(() => {
+      this.dialog.open(this.actaCuadernoDialog, {
+        width: '650px'
+      });
+    });
+  }
+
+  cargarActaAsociada(callback?: () => void): void {
+    if (!this.selectedAsambleaId) return;
+    this.http.get<any>(`${environment.apiUrl}/actas/asamblea/${this.selectedAsambleaId}`).subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.actaAsociada = res.data;
+          if (callback) callback();
+        }
+      },
+      error: () => {
+        this.notify.warning('El acta aún se está generando para esta asamblea.');
+      }
+    });
+  }
+
+  agregarAcuerdoEnVivo(): void {
+    if (!this.nuevoAcuerdoTexto.trim() || !this.actaAsociada) return;
+    this.guardandoAcuerdo = true;
+    this.http.post<any>(`${environment.apiUrl}/actas/${this.actaAsociada.id}/acuerdos`, {
+      descripcion: this.nuevoAcuerdoTexto.trim()
+    }).subscribe({
+      next: (res) => {
+        this.guardandoAcuerdo = false;
+        if (res.success && res.data) {
+          this.actaAsociada = res.data;
+          this.nuevoAcuerdoTexto = '';
+          this.notify.success('✓ Acuerdo registrado en el acta');
+        }
+      },
+      error: (err) => {
+        this.guardandoAcuerdo = false;
+        this.notify.error(err.error?.message || 'Error al guardar el acuerdo.');
+      }
+    });
+  }
+
+  eliminarAcuerdoEnVivo(acuerdoId: number): void {
+    if (!this.actaAsociada) return;
+    this.http.delete<any>(`${environment.apiUrl}/actas/${this.actaAsociada.id}/acuerdos/${acuerdoId}`).subscribe({
+      next: () => {
+        this.actaAsociada.acuerdos = this.actaAsociada.acuerdos.filter((a: any) => a.id !== acuerdoId);
+        // Renumerar local
+        this.actaAsociada.acuerdos.forEach((a: any, idx: number) => a.numero = idx + 1);
+        this.notify.info('Acuerdo removido del acta');
+      }
+    });
+  }
+
+  abrirQrFirmaDialog(): void {
+    if (!this.selectedAsambleaId) return;
+    this.cargarActaAsociada(() => {
+      this.dialog.open(this.qrFirmaDialog, {
+        width: '450px'
+      });
+    });
+  }
+
+  get qrFirmaLinkDirecto(): string {
+    if (!this.selectedAsambleaId) return '';
+    const origin = window.location.origin;
+    return `${origin}/firmar-acta?asambleaId=${this.selectedAsambleaId}`;
+  }
+
+  get qrFirmaUrl(): string {
+    if (!this.selectedAsambleaId) return '';
+    const link = this.qrFirmaLinkDirecto;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(link)}`;
+  }
+
+  copiarQrFirmaLink(): void {
+    const link = this.qrFirmaLinkDirecto;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).then(() => {
+        this.notify.success('📋 Enlace de firma de acta copiado');
+      });
+    } else {
+      this.notify.info(`Enlace: ${link}`);
+    }
+  }
+
+  probarQrFirmaLink(): void {
+    if (this.qrFirmaLinkDirecto) {
+      window.open(this.qrFirmaLinkDirecto, '_blank');
+    }
   }
 }

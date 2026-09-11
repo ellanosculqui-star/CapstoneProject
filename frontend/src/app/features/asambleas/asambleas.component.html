@@ -126,7 +126,7 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Fecha</mat-label>
-          <input matInput type="date" formControlName="fecha">
+          <input matInput type="date" formControlName="fecha" [min]="fechaMinima">
           <mat-error *ngIf="asambleaForm.get('fecha')?.hasError('required')">La fecha es obligatoria</mat-error>
         </mat-form-field>
       </div>
@@ -160,22 +160,187 @@
 
 <!-- DIALOG: DETALLE ASAMBLEA -->
 <ng-template #detalleDialog>
-  <h2 mat-dialog-title>Detalle de la Asamblea</h2>
-  <mat-dialog-content *ngIf="selectedAsamblea">
-    <div class="detail-box">
-      <div class="detail-item"><span>Título:</span> <strong>{{ selectedAsamblea.titulo }}</strong></div>
-      <div class="detail-item"><span>Tipo:</span> <span>{{ selectedAsamblea.tipo }}</span></div>
-      <div class="detail-item"><span>Fecha y Hora:</span> <span>{{ selectedAsamblea.fecha }} a las {{ selectedAsamblea.horaInicio }}</span></div>
-      <div class="detail-item"><span>Lugar:</span> <span>{{ selectedAsamblea.lugar }}</span></div>
-      <div class="detail-item"><span>Estado:</span> <span [class]="selectedAsamblea.estado | estadoBadge">{{ selectedAsamblea.estado }}</span></div>
-      <div class="detail-item"><span>Quórum Mínimo Requerido:</span> <span>{{ selectedAsamblea.quorumMinimoPct }}%</span></div>
-      <div class="detail-agenda">
-        <span>Agenda:</span>
+  <div class="dialog-header-custom">
+    <h2 mat-dialog-title class="dialog-title-clean">Detalle de la Asamblea</h2>
+    <span [class]="selectedAsamblea?.estado | estadoBadge">{{ selectedAsamblea?.estado }}</span>
+  </div>
+
+  <mat-dialog-content *ngIf="selectedAsamblea" class="dialog-content-scroll">
+    <!-- Información General -->
+    <div class="general-info-card">
+      <div class="info-row">
+        <div class="info-col">
+          <span class="label">Título:</span>
+          <strong class="value">{{ selectedAsamblea.titulo }}</strong>
+        </div>
+        <div class="info-col">
+          <span class="label">Tipo:</span>
+          <span class="value badge-tipo">{{ selectedAsamblea.tipo }}</span>
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-col">
+          <span class="label">Fecha y Hora:</span>
+          <span class="value">{{ selectedAsamblea.fecha }} &bull; {{ selectedAsamblea.horaInicio }} {{ selectedAsamblea.horaFin ? ' - ' + selectedAsamblea.horaFin : '' }}</span>
+        </div>
+        <div class="info-col">
+          <span class="label">Lugar:</span>
+          <span class="value">{{ selectedAsamblea.lugar }}</span>
+        </div>
+      </div>
+      <div class="agenda-box">
+        <span class="label">Agenda / Orden del Día:</span>
         <p>{{ selectedAsamblea.agenda }}</p>
       </div>
     </div>
+
+    <!-- Sección de Asistencia y Quórum -->
+    <div class="attendance-section">
+      <div class="section-title-row">
+        <h3><mat-icon>how_to_reg</mat-icon> Control de Asistencia y Quórum</h3>
+        <div class="quorum-status" *ngIf="quorumDetalle">
+          <span class="quorum-tag" [ngClass]="{'quorum-ok': quorumDetalle.quorumAlcanzado, 'quorum-fail': !quorumDetalle.quorumAlcanzado}">
+            {{ quorumDetalle.quorumAlcanzado ? '✓ Quórum Alcanzado' : '⚠ Quórum Insuficiente' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Tarjetas KPI -->
+      <div class="kpi-grid">
+        <div class="kpi-card total">
+          <div class="kpi-icon"><mat-icon>people</mat-icon></div>
+          <div class="kpi-data">
+            <span class="kpi-num">{{ quorumDetalle?.totalHabilitados ?? (selectedAsamblea.totalHabilitadosCorte || padronDetalle.length) }}</span>
+            <span class="kpi-label">Habilitados</span>
+          </div>
+        </div>
+
+        <div class="kpi-card presentes" (click)="filtrarPadron('PRESENTE')">
+          <div class="kpi-icon"><mat-icon>check_circle</mat-icon></div>
+          <div class="kpi-data">
+            <span class="kpi-num">{{ quorumDetalle?.asistentes ?? 0 }}</span>
+            <span class="kpi-label">Presentes</span>
+          </div>
+        </div>
+
+        <div class="kpi-card ausentes" (click)="filtrarPadron('AUSENTE')">
+          <div class="kpi-icon"><mat-icon>cancel</mat-icon></div>
+          <div class="kpi-data">
+            <span class="kpi-num">{{ quorumDetalle?.ausentes ?? 0 }}</span>
+            <span class="kpi-label">Ausentes</span>
+          </div>
+        </div>
+
+        <div class="kpi-card justificados" (click)="filtrarPadron('JUSTIFICADO')">
+          <div class="kpi-icon"><mat-icon>assignment_late</mat-icon></div>
+          <div class="kpi-data">
+            <span class="kpi-num">{{ quorumDetalle?.justificados ?? 0 }}</span>
+            <span class="kpi-label">Justificados</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Quorum -->
+      <div class="quorum-bar-container" *ngIf="quorumDetalle">
+        <div class="quorum-meta">
+          <span>Asistencia: <strong>{{ quorumDetalle.porcentajeAsistencia }}%</strong></span>
+          <span>Mínimo Requerido: <strong>{{ quorumDetalle.quorumMinimoPct }}%</strong></span>
+        </div>
+        <mat-progress-bar 
+          mode="determinate" 
+          [value]="quorumDetalle.porcentajeAsistencia"
+          [color]="quorumDetalle.quorumAlcanzado ? 'primary' : 'warn'">
+        </mat-progress-bar>
+      </div>
+
+      <!-- Padrón de Comuneros con Filtros Rápidos -->
+      <div class="padron-detail-container">
+        <div class="padron-filter-bar">
+          <span class="padron-title">Padrón de Comuneros ({{ padronFiltrado.length }}):</span>
+          <div class="filter-chips">
+            <button type="button" class="chip-btn" [class.active]="filtroAsistencia === 'TODOS'" (click)="filtrarPadron('TODOS')">Todos</button>
+            <button type="button" class="chip-btn chip-pres" [class.active]="filtroAsistencia === 'PRESENTE'" (click)="filtrarPadron('PRESENTE')">Presentes</button>
+            <button type="button" class="chip-btn chip-aus" [class.active]="filtroAsistencia === 'AUSENTE'" (click)="filtrarPadron('AUSENTE')">Ausentes</button>
+            <button type="button" class="chip-btn chip-just" [class.active]="filtroAsistencia === 'JUSTIFICADO'" (click)="filtrarPadron('JUSTIFICADO')">Justificados</button>
+            <button type="button" class="chip-btn chip-pend" [class.active]="filtroAsistencia === 'PENDIENTE'" (click)="filtrarPadron('PENDIENTE')">Pendientes</button>
+          </div>
+        </div>
+
+        <div *ngIf="loadingDetalle" class="loading-padron">
+          <mat-spinner diameter="30"></mat-spinner>
+          <span>Cargando padrón de asistencia...</span>
+        </div>
+
+        <div class="padron-table-wrap" *ngIf="!loadingDetalle">
+          <table class="padron-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>DNI</th>
+                <th>Nombre Completo</th>
+                <th>Sector</th>
+                <th class="text-center">Estado de Asistencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of padronFiltrado">
+                <td class="font-mono">{{ item.codigoComunero }}</td>
+                <td>{{ item.dni }}</td>
+                <td><strong>{{ item.nombreCompleto }}</strong></td>
+                <td>{{ item.sectorNombre || '-' }}</td>
+                <td class="text-center">
+                  <span class="status-pill presente" *ngIf="item.estadoAsistencia === 'PRESENTE'">
+                    <mat-icon>check</mat-icon> PRESENTE
+                  </span>
+                  <span class="status-pill ausente" *ngIf="item.estadoAsistencia === 'AUSENTE'">
+                    <mat-icon>close</mat-icon> AUSENTE
+                  </span>
+                  <span class="status-pill justificado" *ngIf="item.estadoAsistencia === 'JUSTIFICADO'">
+                    <mat-icon>schedule</mat-icon> JUSTIFICADO
+                  </span>
+                  <span class="status-pill pendiente" *ngIf="!item.estadoAsistencia">
+                    PENDIENTE
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="padronFiltrado.length === 0">
+                <td colspan="5" class="empty-padron">No se encontraron comuneros para este filtro.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sección: Acta Oficial Asociada -->
+      <div class="acta-asociada-section" *ngIf="actaAsociada">
+        <div class="section-title-row">
+          <h3><mat-icon>description</mat-icon> Acta Oficial de la Asamblea</h3>
+          <span [class]="actaAsociada.estado | estadoBadge">{{ actaAsociada.estado }}</span>
+        </div>
+        <div class="acta-box">
+          <div class="acta-header-meta">
+            <span><strong>N° Acta:</strong> {{ actaAsociada.numeroActa }}</span>
+            <span><strong>Fecha:</strong> {{ actaAsociada.fecha }}</span>
+          </div>
+          <div class="acta-resumen" *ngIf="actaAsociada.resumen">
+            <span class="label">Resumen de Sesión:</span>
+            <p>{{ actaAsociada.resumen }}</p>
+          </div>
+          <div class="acta-votaciones" *ngIf="actaAsociada.resultadosVotaciones">
+            <span class="label">Resultados y Acuerdos de Votaciones Integrados:</span>
+            <div class="votaciones-content">{{ actaAsociada.resultadosVotaciones }}</div>
+          </div>
+          <div class="acta-actions">
+            <button mat-stroked-button color="primary" (click)="irAActas()">
+              <mat-icon>launch</mat-icon> Ver en Módulo de Actas
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </mat-dialog-content>
-  <mat-dialog-actions align="end">
+
+  <mat-dialog-actions align="end" class="dialog-footer">
     <button mat-raised-button color="primary" mat-dialog-close>Cerrar</button>
   </mat-dialog-actions>
 </ng-template>

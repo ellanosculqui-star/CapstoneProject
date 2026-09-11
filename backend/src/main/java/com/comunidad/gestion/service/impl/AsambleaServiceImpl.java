@@ -13,7 +13,9 @@ import com.comunidad.gestion.entity.Asamblea;
 import com.comunidad.gestion.entity.enums.*;
 import com.comunidad.gestion.mapper.AsambleaMapper;
 import com.comunidad.gestion.repository.*;
+import com.comunidad.gestion.service.ActaService;
 import com.comunidad.gestion.service.AsambleaService;
+import com.comunidad.gestion.service.AsistenciaService;
 import com.comunidad.gestion.service.AuditoriaService;
 import com.comunidad.gestion.service.QuorumService;
 import com.comunidad.gestion.service.VotacionService;
@@ -39,12 +41,18 @@ public class AsambleaServiceImpl implements AsambleaService {
     private final ActaRepository actaRepository;
     private final AsambleaMapper asambleaMapper;
     private final QuorumService quorumService;
-    private final VotacionService votacionService;
+    private final AsistenciaService asistenciaService;
     private final AuditoriaService auditoriaService;
+    private final VotacionService votacionService;
+    private final ActaService actaService;
 
     @Override
     @Transactional
     public AsambleaResponse crearAsamblea(AsambleaRequest request) {
+        if (request.getFecha() != null && request.getFecha().isBefore(LocalDate.now())) {
+            throw new BadRequestException("No se puede programar una asamblea para una fecha anterior a la actual (" + LocalDate.now() + ").");
+        }
+
         Asamblea asamblea = asambleaMapper.toEntity(request);
         Asamblea guardada = asambleaRepository.save(asamblea);
 
@@ -61,12 +69,23 @@ public class AsambleaServiceImpl implements AsambleaService {
                 "127.0.0.1"
         );
 
+        // Regla: Toda asamblea debe tener un acta asociada automáticamente
+        try {
+            actaService.crearOActualizarActaDeAsamblea(guardada.getId());
+        } catch (Exception ignored) {
+            // Se sincroniza o genera posteriormente si los datos se actualizan
+        }
+
         return obtenerPorId(guardada.getId());
     }
 
     @Override
     @Transactional
     public AsambleaResponse actualizarAsamblea(Long id, AsambleaRequest request) {
+        if (request.getFecha() != null && request.getFecha().isBefore(LocalDate.now())) {
+            throw new BadRequestException("No se puede reprogramar una asamblea para una fecha anterior a la actual (" + LocalDate.now() + ").");
+        }
+
         Asamblea asamblea = asambleaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Asamblea", "id", id));
 
@@ -76,6 +95,12 @@ public class AsambleaServiceImpl implements AsambleaService {
 
         asambleaMapper.updateEntity(asamblea, request);
         Asamblea actualizada = asambleaRepository.save(asamblea);
+
+        // Actualizar datos del acta asociada
+        try {
+            actaService.crearOActualizarActaDeAsamblea(actualizada.getId());
+        } catch (Exception ignored) {
+        }
 
         String currentUser = getCurrentUsername();
         auditoriaService.registrarLog(
@@ -166,9 +191,24 @@ public class AsambleaServiceImpl implements AsambleaService {
                     CondicionHabilitacion.HABILITADO, EstadoComunero.ACTIVO
             );
             asamblea.setTotalHabilitadosCorte(habilitados);
+            if (asamblea.getHoraInicio() == null) {
+                asamblea.setHoraInicio(LocalTime.now());
+            }
+            // Regla comunal: Aperturar de inmediato el Acta oficial con datos preestablecidos
+            try {
+                actaService.crearOActualizarActaDeAsamblea(id);
+            } catch (Exception ignored) {
+            }
         } else if (nuevoEstado == EstadoAsamblea.FINALIZADA) {
             if (asamblea.getHoraFin() == null) {
                 asamblea.setHoraFin(LocalTime.now());
+            }
+            // Regla comunal: Quienes no hayan marcado asistencia al finalizar la asamblea quedan AUSENTES por defecto
+            asistenciaService.marcarAusentesRestantes(id);
+            // Regla: Integrar todo lo desarrollado en la asamblea (asistencia, quorum, votaciones y acuerdos) en el Acta
+            try {
+                actaService.crearOActualizarActaDeAsamblea(id);
+            } catch (Exception ignored) {
             }
         }
 

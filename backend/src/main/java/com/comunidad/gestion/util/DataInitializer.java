@@ -334,7 +334,7 @@ public class DataInitializer implements CommandLineRunner {
                 .titulo("Autorización de Servidumbre de Paso para Tendido Eléctrico")
                 .descripcion("Se vota conceder el permiso de paso en los terrenos comunales para la electrificación.")
                 .propuesta("Aprobar la cesión de paso sin perjuicio de indemnizaciones individuales.")
-                .tipo(TipoVotacion.DOS_TERCIOS)
+                .tipo(TipoVotacion.MAYORIA_CALIFICADA)
                 .estado(EstadoVotacion.CERRADA)
                 .fechaApertura(asamblea2.getFecha().atTime(16, 0))
                 .fechaCierre(asamblea2.getFecha().atTime(16, 40))

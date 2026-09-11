@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
@@ -36,16 +36,24 @@ export class AsistenciaService {
 
   constructor(private http: HttpClient) {}
 
-  obtenerPadron(asambleaId: number): Observable<ApiResponse<AsistenciaPadronDto[]>> {
-    return this.http.get<ApiResponse<AsistenciaPadronDto[]>>(`${this.apiUrl}/${asambleaId}/asistencia/padron`);
+  obtenerPadron(asambleaId: number, silent = false): Observable<ApiResponse<AsistenciaPadronDto[]>> {
+    let headers = new HttpHeaders();
+    if (silent) {
+      headers = headers.set('X-Silent', 'true');
+    }
+    return this.http.get<ApiResponse<AsistenciaPadronDto[]>>(`${this.apiUrl}/${asambleaId}/asistencia/padron`, { headers });
   }
 
-  registrar(asambleaId: number, comuneroId: number, estado: string, observacion?: string): Observable<ApiResponse<any>> {
+  registrar(asambleaId: number, comuneroId: number, estado: string, observacion?: string, silent = false): Observable<ApiResponse<any>> {
+    let headers = new HttpHeaders();
+    if (silent) {
+      headers = headers.set('X-Silent', 'true');
+    }
     return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${asambleaId}/asistencia`, {
       comuneroId,
       estado,
       observacion
-    });
+    }, { headers });
   }
 
   marcarRapida(asambleaId: number, identificador: string, estado = 'PRESENTE'): Observable<ApiResponse<any>> {
@@ -53,7 +61,11 @@ export class AsistenciaService {
     return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${asambleaId}/asistencia/rapida`, {}, { params });
   }
 
-  calcularQuorum(asambleaId: number): Observable<ApiResponse<QuorumResponse>> {
-    return this.http.get<ApiResponse<QuorumResponse>>(`${this.apiUrl}/${asambleaId}/asistencia/quorum`);
+  calcularQuorum(asambleaId: number, silent = false): Observable<ApiResponse<QuorumResponse>> {
+    let headers = new HttpHeaders();
+    if (silent) {
+      headers = headers.set('X-Silent', 'true');
+    }
+    return this.http.get<ApiResponse<QuorumResponse>>(`${this.apiUrl}/${asambleaId}/asistencia/quorum`, { headers });
   }
 }

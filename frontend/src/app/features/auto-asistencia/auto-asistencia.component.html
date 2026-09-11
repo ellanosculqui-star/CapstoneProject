@@ -94,9 +94,15 @@
 <div *ngIf="pantalla === 'exito'" class="page-wrapper">
   <div class="card-central card-exito">
     <div class="icono-exito">&#10004;</div>
-    <h2>Asistencia Registrada</h2>
+    <h2>Asistencia Confirmada</h2>
     <p *ngIf="nombreComunero" class="nombre-comunero">{{ nombreComunero }}</p>
+    <p *ngIf="dniRegistradoPrevio" class="dni-confirmado">DNI: {{ dniRegistradoPrevio }}</p>
     <p class="mensaje-exito">Tu presencia ha sido confirmada exitosamente en la asamblea.</p>
+    
+    <div class="dispositivo-info">
+      <span>📱 Dispositivo vinculado a este registro</span>
+    </div>
+
     <div *ngIf="asamblea" class="info-asamblea compacta">
       <div class="info-item"><span class="label">Asamblea:</span> {{ asamblea.titulo }}</div>
       <div class="info-item"><span class="label">Fecha:</span> {{ formatearFecha(asamblea.fecha) }}</div>
@@ -109,7 +115,7 @@
   <div class="card-central card-error">
     <div class="icono-estado">&#10060;</div>
     <h2>No se pudo registrar</h2>
-    <p>{{ mensajeError }}</p>
+    <p class="error-detalle">{{ mensajeError }}</p>
     <button class="btn-reintentar" (click)="reintentar()">
       &#8635; Intentar de nuevo
     </button>

@@ -104,6 +104,22 @@ public class ActaMapper {
             quorum = pct.compareTo(acta.getAsamblea().getQuorumMinimoPct()) >= 0;
         }
 
+        List<com.comunidad.gestion.dto.acta.FirmaActaDto> firmasDto = new ArrayList<>();
+        if (acta.getFirmas() != null) {
+            firmasDto = acta.getFirmas().stream()
+                    .map(f -> com.comunidad.gestion.dto.acta.FirmaActaDto.builder()
+                            .id(f.getId())
+                            .comuneroId(f.getComunero() != null ? f.getComunero().getId() : null)
+                            .comuneroDni(f.getComunero() != null ? f.getComunero().getDni() : "")
+                            .comuneroNombreCompleto(f.getComunero() != null ? (f.getComunero().getNombres() + " " + f.getComunero().getApellidos()) : "")
+                            .comuneroCodigo(f.getComunero() != null ? f.getComunero().getCodigoComunero() : "")
+                            .fechaHoraFirma(f.getFechaHoraFirma())
+                            .trazoFirma(f.getTrazoFirma())
+                            .dispositivo(f.getDispositivo())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
         return ActaResponse.builder()
                 .id(acta.getId())
                 .asambleaId(acta.getAsamblea() != null ? acta.getAsamblea().getId() : null)
@@ -124,6 +140,8 @@ public class ActaMapper {
                 .porcentajeAsistencia(pct)
                 .quorumAlcanzado(quorum)
                 .acuerdos(acuerdosDto)
+                .firmas(firmasDto)
+                .totalFirmas(firmasDto.size())
                 .fechaCreacion(acta.getFechaCreacion())
                 .fechaModificacion(acta.getFechaModificacion())
                 .build();

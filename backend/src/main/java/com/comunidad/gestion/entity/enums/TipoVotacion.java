@@ -2,7 +2,7 @@ package com.comunidad.gestion.entity.enums;
 
 public enum TipoVotacion {
     MAYORIA_SIMPLE,
-    DOS_TERCIOS,
+    MAYORIA_CALIFICADA,
     UNANIMIDAD,
     ELECCION_REPRESENTANTE
 }

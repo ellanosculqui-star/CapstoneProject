@@ -71,6 +71,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auto-votacion/auto-votacion.component').then(m => m.AutoVotacionComponent)
   },
   {
+    path: 'firmar-acta',
+    loadComponent: () => import('./features/auto-firma-acta/auto-firma-acta.component').then(m => m.AutoFirmaActaComponent)
+  },
+  {
     path: '**',
     redirectTo: 'auth/login'
   }

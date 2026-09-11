@@ -43,6 +43,7 @@ public class ActaServiceImpl implements ActaService {
     private final AsistenciaRepository asistenciaRepository;
     private final ComuneroRepository comuneroRepository;
     private final UsuarioRepository usuarioRepository;
+    private final FirmaActaRepository firmaActaRepository;
     private final ActaMapper actaMapper;
     private final QuorumService quorumService;
     private final VotacionService votacionService;
@@ -129,6 +130,23 @@ public class ActaServiceImpl implements ActaService {
                 CondicionHabilitacion.HABILITADO, EstadoComunero.ACTIVO
         );
 
+        // Recalcular porcentaje real de asistencia
+        double porcentaje = totalHabilitados > 0 ? (asistentes * 100.0 / totalHabilitados) : 0.0;
+        boolean quorumOk = porcentaje >= 50.0;
+        String estadoQuorum = quorumOk ? "QUÓRUM ALCANZADO" : "QUÓRUM NO ALCANZADO";
+
+        // Regenerar el resumen con los datos reales actuales de asistencia
+        Asamblea asamblea = acta.getAsamblea();
+        String resumenActualizado = "En la localidad de " + asamblea.getLugar()
+                + ", a las " + asamblea.getHoraInicio()
+                + " horas del día " + asamblea.getFecha()
+                + ", se reunieron los comuneros calificados en Asamblea " + asamblea.getTipo()
+                + " bajo la agenda: " + asamblea.getAgenda() + ". "
+                + "Se constató un quórum de " + String.format("%.2f", porcentaje) + "% con "
+                + asistentes + " asistentes de un padrón habilitado de "
+                + totalHabilitados + " comuneros (" + estadoQuorum + ").";
+        acta.setResumen(resumenActualizado);
+
         return actaMapper.toResponse(acta, asistentes, ausentes, totalHabilitados);
     }
 
@@ -154,12 +172,24 @@ public class ActaServiceImpl implements ActaService {
             resVot.append("No se realizaron votaciones formales durante la asamblea.");
         } else {
             for (VotacionResponse v : votaciones) {
-                resVot.append("- ").append(v.getTitulo()).append(": ");
+                resVot.append("- ").append(v.getTitulo()).append(" (").append(v.getTipo()).append("): ");
                 if (v.getResultado() != null) {
-                    resVot.append("A favor: ").append(v.getResultado().getVotosAFavor())
-                            .append(", En contra: ").append(v.getResultado().getVotosEnContra())
-                            .append(", Abstención: ").append(v.getResultado().getVotosAbstencion())
-                            .append(". Resultado: ").append(v.getResultado().getResultadoDecision()).append(".\n");
+                    if ("ELECCION_REPRESENTANTE".equals(v.getTipo()) && v.getResultado().getVotosPorCandidato() != null) {
+                        resVot.append("Escrutinio por Candidato: [");
+                        v.getResultado().getVotosPorCandidato().forEach((candidato, votos) -> {
+                            java.math.BigDecimal pct = (v.getResultado().getPorcentajePorCandidato() != null && v.getResultado().getPorcentajePorCandidato().containsKey(candidato)) ? 
+                                    v.getResultado().getPorcentajePorCandidato().get(candidato) : java.math.BigDecimal.ZERO;
+                            resVot.append(candidato).append(": ").append(votos).append(" votos (").append(pct).append("%), ");
+                        });
+                        resVot.append("]. Candidato Electo / Dictamen: ")
+                                .append(v.getResultado().getCandidatoGanador() != null ? v.getResultado().getCandidatoGanador() : v.getResultado().getResultadoDecision())
+                                .append(".\n");
+                    } else {
+                        resVot.append("A favor: ").append(v.getResultado().getVotosAFavor())
+                                .append(", En contra: ").append(v.getResultado().getVotosEnContra())
+                                .append(", Abstención: ").append(v.getResultado().getVotosAbstencion())
+                                .append(". Dictamen: ").append(v.getResultado().getResultadoDecision()).append(".\n");
+                    }
                 }
             }
         }
@@ -198,6 +228,50 @@ public class ActaServiceImpl implements ActaService {
 
     @Override
     @Transactional
+    public ActaResponse crearOActualizarActaDeAsamblea(Long asambleaId) {
+        Asamblea asamblea = asambleaRepository.findById(asambleaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Asamblea", "id", asambleaId));
+
+        ActaResponse borrador = generarBorradorAutomatico(asambleaId);
+
+        Usuario responsable = getUsuarioActual();
+
+        Acta acta = actaRepository.findByAsambleaId(asambleaId).orElse(null);
+        if (acta == null) {
+            String numActa = borrador.getNumeroActa();
+            int sufijo = 1;
+            while (actaRepository.existsByNumeroActa(numActa)) {
+                numActa = borrador.getNumeroActa() + "-" + sufijo++;
+            }
+            acta = Acta.builder()
+                    .asamblea(asamblea)
+                    .numeroActa(numActa)
+                    .fecha(asamblea.getFecha())
+                    .lugar(asamblea.getLugar())
+                    .agenda(asamblea.getAgenda())
+                    .resumen(borrador.getResumen())
+                    .resultadosVotaciones(borrador.getResultadosVotaciones())
+                    .observaciones(borrador.getObservaciones())
+                    .estado(EstadoActa.BORRADOR)
+                    .responsable(responsable)
+                    .build();
+        } else {
+            acta.setFecha(asamblea.getFecha());
+            acta.setLugar(asamblea.getLugar());
+            acta.setAgenda(asamblea.getAgenda());
+            acta.setResumen(borrador.getResumen());
+            acta.setResultadosVotaciones(borrador.getResultadosVotaciones());
+            if (responsable != null) {
+                acta.setResponsable(responsable);
+            }
+        }
+
+        Acta guardada = actaRepository.save(acta);
+        return obtenerPorId(guardada.getId());
+    }
+
+    @Override
+    @Transactional
     public ActaResponse aprobarActa(Long id) {
         Acta acta = actaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Acta", "id", id));
@@ -219,6 +293,116 @@ public class ActaServiceImpl implements ActaService {
         );
 
         return obtenerPorId(guardada.getId());
+    }
+
+    @Override
+    @Transactional
+    public ActaResponse agregarAcuerdo(Long actaId, String descripcion) {
+        if (descripcion == null || descripcion.trim().isEmpty()) {
+            throw new BadRequestException("La descripción del acuerdo no puede estar vacía");
+        }
+
+        Acta acta = actaRepository.findById(actaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Acta", "id", actaId));
+
+        int proximoNumero = acta.getAcuerdos().size() + 1;
+        com.comunidad.gestion.entity.Acuerdo nuevoAcuerdo = com.comunidad.gestion.entity.Acuerdo.builder()
+                .acta(acta)
+                .numero(proximoNumero)
+                .descripcion(descripcion.trim())
+                .estado(com.comunidad.gestion.entity.enums.EstadoAcuerdo.PENDIENTE)
+                .build();
+
+        acta.getAcuerdos().add(nuevoAcuerdo);
+        Acta guardada = actaRepository.save(acta);
+
+        String currentUser = getCurrentUsername();
+        auditoriaService.registrarLog(
+                currentUser,
+                TipoAccionAuditoria.EDITAR_ACTA,
+                "ACTAS",
+                "Se agregó el acuerdo N° " + proximoNumero + " al acta " + acta.getNumeroActa(),
+                "actas",
+                acta.getId(),
+                null,
+                "acuerdo: " + descripcion.trim(),
+                "127.0.0.1"
+        );
+
+        return obtenerPorId(guardada.getId());
+    }
+
+    @Override
+    @Transactional
+    public void eliminarAcuerdo(Long actaId, Long acuerdoId) {
+        Acta acta = actaRepository.findById(actaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Acta", "id", actaId));
+
+        boolean removed = acta.getAcuerdos().removeIf(a -> a.getId().equals(acuerdoId));
+        if (!removed) {
+            throw new ResourceNotFoundException("Acuerdo", "id", acuerdoId);
+        }
+
+        // Renumerar acuerdos
+        for (int i = 0; i < acta.getAcuerdos().size(); i++) {
+            acta.getAcuerdos().get(i).setNumero(i + 1);
+        }
+
+        actaRepository.save(acta);
+    }
+
+    @Override
+    @Transactional
+    public com.comunidad.gestion.dto.acta.FirmaActaDto registrarFirmaComunero(Long actaId, String dni, String trazoFirma, String dispositivo, String ip) {
+        if (dni == null || dni.trim().isEmpty()) {
+            throw new BadRequestException("El DNI es obligatorio para firmar el acta");
+        }
+
+        Acta acta = actaRepository.findById(actaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Acta", "id", actaId));
+
+        com.comunidad.gestion.entity.Comunero comunero = comuneroRepository.findByDni(dni.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Comunero no encontrado con DNI: " + dni));
+
+        if (comunero.getEstado() != EstadoComunero.ACTIVO) {
+            throw new BadRequestException("El comunero no se encuentra activo en el padrón comunal.");
+        }
+
+        // REGLA FUNDAMENTAL: Solo los presentes en la asamblea pueden firmar el acta
+        boolean estuvoPresente = asistenciaRepository.findByAsambleaIdAndComuneroId(acta.getAsamblea().getId(), comunero.getId())
+                .map(asist -> asist.getEstado() == EstadoAsistencia.PRESENTE)
+                .orElse(false);
+
+        if (!estuvoPresente) {
+            throw new BadRequestException("No registraste asistencia como PRESENTE en esta asamblea. Solo los comuneros que asistieron pueden firmar el acta.");
+        }
+
+        // Verificar si ya firmó
+        if (firmaActaRepository.existsByActaIdAndComuneroId(actaId, comunero.getId())) {
+            throw new BadRequestException("El comunero con DNI " + dni + " ya firmó esta acta.");
+        }
+
+        com.comunidad.gestion.entity.FirmaActa firma = com.comunidad.gestion.entity.FirmaActa.builder()
+                .acta(acta)
+                .comunero(comunero)
+                .fechaHoraFirma(java.time.LocalDateTime.now())
+                .trazoFirma(trazoFirma)
+                .dispositivo(dispositivo)
+                .ipAddress(ip)
+                .build();
+
+        com.comunidad.gestion.entity.FirmaActa guardada = firmaActaRepository.save(firma);
+
+        return com.comunidad.gestion.dto.acta.FirmaActaDto.builder()
+                .id(guardada.getId())
+                .comuneroId(comunero.getId())
+                .comuneroDni(comunero.getDni())
+                .comuneroNombreCompleto(comunero.getNombres() + " " + comunero.getApellidos())
+                .comuneroCodigo(comunero.getCodigoComunero())
+                .fechaHoraFirma(guardada.getFechaHoraFirma())
+                .trazoFirma(guardada.getTrazoFirma())
+                .dispositivo(guardada.getDispositivo())
+                .build();
     }
 
     @Override

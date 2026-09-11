@@ -86,16 +86,16 @@
     <!-- BARRA DE BOTONES DE ACCIÓN RÁPIDA (Prompt Sección 25) -->
     <div class="quick-actions-bar">
       <button mat-raised-button color="primary" (click)="abrirQrDialog()" class="q-btn">
-        <mat-icon>qr_code</mat-icon> MOSTRAR QR
+        <mat-icon>qr_code</mat-icon> QR ASISTENCIA
       </button>
-      <button mat-raised-button color="accent" (click)="navegarA('/votaciones')" class="q-btn">
-        <mat-icon>how_to_vote</mat-icon> INICIAR VOTACIÓN
+      <button mat-raised-button color="accent" (click)="abrirCuadernoActa()" class="q-btn btn-actas">
+        <mat-icon>edit_note</mat-icon> DIGITAR ACUERDOS
       </button>
-      <button mat-raised-button class="q-btn btn-actas" (click)="navegarA('/actas')">
-        <mat-icon>edit_note</mat-icon> REGISTRAR ACUERDO
+      <button mat-raised-button color="warn" (click)="abrirQrFirmaDialog()" class="q-btn btn-firma">
+        <mat-icon>draw</mat-icon> QR FIRMAR ACTA
       </button>
-      <button mat-stroked-button color="primary" (click)="navegarA('/actas')" class="q-btn">
-        <mat-icon>description</mat-icon> GENERAR ACTA
+      <button mat-stroked-button color="primary" (click)="navegarA('/votaciones')" class="q-btn">
+        <mat-icon>how_to_vote</mat-icon> VOTACIONES
       </button>
     </div>
 
@@ -194,8 +194,16 @@
           <input matInput [(ngModel)]="filtroTexto" (input)="aplicarFiltro()" placeholder="Buscar por nombre o DNI">
         </mat-form-field>
 
-        <button mat-stroked-button (click)="abrirQrDialog()" class="btn-qr">
-          <mat-icon>qr_code</mat-icon> Ver QR Asamblea
+        <button mat-stroked-button (click)="abrirQrDialog()" class="btn-qr" matTooltip="QR para que comuneros marquen asistencia">
+          <mat-icon>qr_code</mat-icon> QR Asistencia
+        </button>
+
+        <button mat-raised-button color="accent" (click)="abrirCuadernoActa()" [disabled]="!selectedAsambleaId" matTooltip="Digitar acuerdos de la asamblea en el acta">
+          <mat-icon>edit_note</mat-icon> Digitar Acuerdos
+        </button>
+
+        <button mat-raised-button color="warn" (click)="abrirQrFirmaDialog()" [disabled]="!selectedAsambleaId" matTooltip="QR para firma colectiva del acta">
+          <mat-icon>draw</mat-icon> QR Firmar Acta
         </button>
       </div>
     </mat-card-content>
@@ -299,6 +307,99 @@
 
       <button mat-raised-button color="accent" (click)="probarQrLink()">
         <mat-icon>open_in_new</mat-icon> Probar Enlace
+      </button>
+
+      <button mat-button mat-dialog-close color="primary">Cerrar</button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- DIALOG: CUADERNO DEL ACTA (SECRETARIO REGISTRA ACUERDOS EN VIVO) -->
+<ng-template #actaCuadernoDialog>
+  <div class="cuaderno-dialog-container">
+    <div class="cuaderno-header">
+      <h2><mat-icon color="primary">edit_note</mat-icon> Cuaderno del Acta en Vivo</h2>
+      <span class="acta-tag" *ngIf="actaAsociada">Acta N° {{ actaAsociada.numeroActa }}</span>
+    </div>
+
+    <div class="cuaderno-meta" *ngIf="actaAsociada">
+      <p><strong>Asamblea:</strong> {{ actaAsociada.asambleaTitulo }}</p>
+      <p><strong>Fecha y Lugar:</strong> {{ actaAsociada.fecha }} &mdash; {{ actaAsociada.lugar }}</p>
+      <p class="agenda-text"><strong>Agenda Oficial:</strong> {{ actaAsociada.agenda }}</p>
+    </div>
+
+    <!-- Formulario para agregar nuevo acuerdo -->
+    <div class="nuevo-acuerdo-form">
+      <mat-form-field appearance="outline" class="w-100">
+        <mat-label>Redactar Acuerdo alcanzado en debate...</mat-label>
+        <textarea matInput [(ngModel)]="nuevoAcuerdoTexto" rows="3" placeholder="Ej: Se acuerda por unanimidad la faena comunal para el día sábado a las 7:00 am..."></textarea>
+      </mat-form-field>
+      <div class="nuevo-acuerdo-actions">
+        <button mat-raised-button color="primary" (click)="agregarAcuerdoEnVivo()" [disabled]="!nuevoAcuerdoTexto.trim() || guardandoAcuerdo">
+          <mat-icon>add_circle</mat-icon> Registrar Acuerdo en el Acta
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de Acuerdos Tomados -->
+    <div class="acuerdos-registrados">
+      <h3>Acuerdos Acumulados en el Acta ({{ actaAsociada?.acuerdos?.length || 0 }}):</h3>
+      <div class="acuerdos-scroll">
+        <div class="acuerdo-card" *ngFor="let ac of actaAsociada?.acuerdos">
+          <div class="ac-num">Acuerdo #{{ ac.numero }}</div>
+          <div class="ac-desc">{{ ac.descripcion }}</div>
+          <button mat-icon-button color="warn" (click)="eliminarAcuerdoEnVivo(ac.id)" matTooltip="Eliminar acuerdo">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+
+        <div *ngIf="!actaAsociada?.acuerdos || actaAsociada?.acuerdos.length === 0" class="no-acuerdos">
+          <mat-icon>post_add</mat-icon>
+          <p>Aún no se han redactado acuerdos para esta asamblea. Digite el primer acuerdo arriba.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dialog-footer-actions">
+      <button mat-button mat-dialog-close color="primary">Cerrar</button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- DIALOG: QR PARA FIRMA COLECTIVA DEL ACTA -->
+<ng-template #qrFirmaDialog>
+  <div class="qr-dialog-content">
+    <h2><mat-icon color="warn">draw</mat-icon> Código QR para Firmar Acta Oficial</h2>
+    <p>Proyecte este código o compártalo con los comuneros presentes para que procedan con la <strong>firma digital y conformidad del acta</strong>.</p>
+
+    <div class="qr-image-box" *ngIf="selectedAsambleaId">
+      <img [src]="qrFirmaUrl" alt="QR Firma Acta" class="qr-img">
+    </div>
+
+    <div class="qr-info">
+      <strong>{{ selectedAsamblea?.titulo }}</strong>
+      <span *ngIf="actaAsociada">Acta N°: {{ actaAsociada.numeroActa }}</span>
+      <span class="firmas-count" *ngIf="actaAsociada?.firmas">
+        ✍️ {{ actaAsociada.firmas.length }} Comuneros ya firmaron el acta
+      </span>
+      <code class="qr-link-text">{{ qrFirmaLinkDirecto }}</code>
+    </div>
+
+    <div class="qr-testing-guide">
+      <p class="guide-title">🛡️ <strong>Regla de Conformidad:</strong></p>
+      <ul>
+        <li>Solo podrán firmar los comuneros que hayan sido registrados como <strong>PRESENTE</strong>.</li>
+        <li>Si un comunero faltó a la reunión, el sistema rechazará su intento de firma.</li>
+      </ul>
+    </div>
+
+    <div class="dialog-actions qr-actions">
+      <button mat-stroked-button (click)="copiarQrFirmaLink()">
+        <mat-icon>content_copy</mat-icon> Copiar Enlace
+      </button>
+
+      <button mat-raised-button color="warn" (click)="probarQrFirmaLink()">
+        <mat-icon>open_in_new</mat-icon> Abrir en Nueva Pestaña
       </button>
 
       <button mat-button mat-dialog-close color="primary">Cerrar</button>

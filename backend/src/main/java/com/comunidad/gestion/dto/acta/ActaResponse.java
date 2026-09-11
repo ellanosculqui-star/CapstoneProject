@@ -38,6 +38,9 @@ public class ActaResponse {
     private Boolean quorumAlcanzado;
     @Builder.Default
     private List<AcuerdoDto> acuerdos = new ArrayList<>();
+    @Builder.Default
+    private List<FirmaActaDto> firmas = new ArrayList<>();
+    private Integer totalFirmas;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaModificacion;
 }

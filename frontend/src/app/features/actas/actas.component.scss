@@ -93,5 +93,112 @@
       font-size: 0.9rem;
       margin: 0;
     }
+
+    &.votaciones-section {
+      .votaciones-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+
+        .votaciones-content {
+          margin: 0;
+          font-family: inherit;
+          font-size: 0.88rem;
+          color: #1e293b;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+      }
+    }
   }
+
+  .acuerdos-detalle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .acuerdo-row {
+      background: #f8fafc;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border-left: 3px solid #2563eb;
+      font-size: 0.88rem;
+
+      .num {
+        font-weight: 700;
+        color: #2563eb;
+        margin-right: 8px;
+      }
+
+      .desc {
+        color: #1e293b;
+      }
+    }
+  }
+
+  .firmas-section {
+    .firmas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+
+      .firma-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+
+        .firma-head {
+          strong { display: block; font-size: 0.88rem; color: #1e293b; }
+          span { font-size: 0.78rem; color: #64748b; }
+        }
+
+        .firma-trazo {
+          margin: 8px 0;
+          img {
+            max-width: 100%;
+            height: 50px;
+            object-fit: contain;
+          }
+        }
+
+        .firma-digital-badge {
+          background: #ecfdf5;
+          color: #047857;
+          font-size: 0.78rem;
+          font-weight: 600;
+          padding: 6px;
+          border-radius: 6px;
+          margin: 8px 0;
+
+          .check { font-weight: 700; }
+        }
+
+        .firma-hora {
+          font-size: 0.72rem;
+          color: #94a3b8;
+          display: block;
+        }
+      }
+    }
+
+    .sin-firmas {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.88rem;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+  }
+}
+
+
+@media print {
+  .no-print { display: none !important; }
+  .printable { width: 100%; }
+  .acta-section { page-break-inside: avoid; }
 }

@@ -12,19 +12,44 @@
         <mat-label>Seleccionar Asamblea Comunitaria</mat-label>
         <mat-select [(ngModel)]="selectedAsambleaId" (selectionChange)="onAsambleaChange()">
           <mat-option *ngFor="let a of asambleas" [value]="a.id">
-            🏛️ {{ a.titulo }} ({{ a.fecha }}) — {{ a.tipo || 'General' }}
+            🏛️ {{ a.titulo }} ({{ a.fecha }}) — [{{ a.estado }}]
           </mat-option>
         </mat-select>
       </mat-form-field>
     </div>
 
     <div class="action-buttons">
+      <!-- Botón para Iniciar Asamblea rápidamente si está PROGRAMADA -->
+      <button mat-raised-button color="accent" *ngIf="selectedAsamblea && selectedAsamblea.estado === 'PROGRAMADA'" (click)="iniciarAsambleaActual()">
+        <mat-icon>play_arrow</mat-icon> Iniciar Asamblea Ahora
+      </button>
+
       <button mat-raised-button color="primary" class="btn-nueva-propuesta" (click)="abrirCrearModal()">
         <mat-icon>add_task</mat-icon> Nueva Propuesta a Voto
       </button>
     </div>
   </mat-card-content>
 </mat-card>
+
+<!-- Alerta clara si la asamblea seleccionada está FINALIZADA o PROGRAMADA -->
+<div class="asamblea-status-banner" *ngIf="selectedAsamblea && selectedAsamblea.estado !== 'EN_CURSO'">
+  <mat-icon class="banner-icon">{{ selectedAsamblea.estado === 'FINALIZADA' ? 'lock' : 'info' }}</mat-icon>
+  <div class="banner-text">
+    <strong>Estado actual de la asamblea: {{ selectedAsamblea.estado }}</strong>
+    <p *ngIf="selectedAsamblea.estado === 'FINALIZADA'">
+      Esta asamblea ya concluyó. No se pueden abrir nuevas votaciones en asambleas finalizadas. Por favor seleccione una asamblea <strong>EN CURSO</strong> o cree/inicie una nueva en el menú de Asambleas.
+    </p>
+    <p *ngIf="selectedAsamblea.estado === 'PROGRAMADA'">
+      Para poder abrir votaciones y emitir votos, primero debe <strong>Iniciar la Asamblea</strong> (pasar a estado EN CURSO).
+    </p>
+  </div>
+  <button mat-raised-button color="accent" *ngIf="selectedAsamblea.estado === 'PROGRAMADA'" (click)="iniciarAsambleaActual()">
+    <mat-icon>play_arrow</mat-icon> Iniciar Asamblea
+  </button>
+  <button mat-stroked-button color="primary" *ngIf="selectedAsamblea.estado === 'FINALIZADA'" routerLink="/asambleas">
+    <mat-icon>gavel</mat-icon> Ir a Asambleas
+  </button>
+</div>
 
 <!-- Resumen de Métricas de Votación -->
 <div class="stats-grid" *ngIf="selectedAsambleaId">
@@ -198,25 +223,28 @@
 
   <mat-dialog-content [formGroup]="votacionForm" class="dialog-form">
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Título de la Propuesta / Moción</mat-label>
-      <input matInput formControlName="titulo" placeholder="Ej: Aprobación del Presupuesto de Canal de Riego">
+      <mat-label>Título de la Elección / Moción</mat-label>
+      <input matInput formControlName="titulo" placeholder="Ej: Elección de Presidente Comunal 2026">
       <mat-error *ngIf="votacionForm.get('titulo')?.hasError('required')">El título es obligatorio</mat-error>
     </mat-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
+    <mat-form-field appearance="outline" class="full-width" *ngIf="votacionForm.get('tipo')?.value !== 'ELECCION_REPRESENTANTE'">
       <mat-label>Propuesta Específica Sometida a Voto</mat-label>
       <textarea matInput formControlName="propuesta" rows="3" placeholder="Redacte el acuerdo o resolución que será votado por los comuneros..."></textarea>
       <mat-error *ngIf="votacionForm.get('propuesta')?.hasError('required')">La propuesta es obligatoria</mat-error>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Descripción / Contexto Adicional (Opcional)</mat-label>
-      <textarea matInput formControlName="descripcion" rows="2" placeholder="Antecedentes, justificación técnica o legal..."></textarea>
+      <mat-label>Descripción / Observaciones (Opcional)</mat-label>
+      <textarea matInput formControlName="descripcion" rows="2" placeholder="Detalles de la elección o justificación..."></textarea>
     </mat-form-field>
 
     <div class="tipo-votacion-group">
       <label class="tipo-label">Tipo de Proceso / Regla:</label>
       <mat-radio-group formControlName="tipo" class="radio-vertical">
+        <mat-radio-button value="ELECCION_REPRESENTANTE">
+          <strong>Elección de Representante / Autoridad</strong> (Postulantes/Candidatos)
+        </mat-radio-button>
         <mat-radio-button value="MAYORIA_SIMPLE">
           <strong>Mayoría Simple</strong> (Más del 50% de los votos emitidos)
         </mat-radio-button>
@@ -226,37 +254,36 @@
         <mat-radio-button value="UNANIMIDAD">
           <strong>Unanimidad</strong> (100% de aprobación sin votos en contra)
         </mat-radio-button>
-        <mat-radio-button value="ELECCION_REPRESENTANTE">
-          <strong>Elección de Representante / Autoridad</strong> (Postulantes/Candidatos)
-        </mat-radio-button>
       </mat-radio-group>
     </div>
 
     <!-- Lista dinámica de candidatos para ELECCION_REPRESENTANTE -->
-    <div class="candidatos-config-box" *ngIf="votacionForm.get('tipo')?.value === 'ELECCION_REPRESENTANTE'">
+    <div class="candidatos-config-box" *ngIf="votacionForm.get('tipo')?.value === 'ELECCION_REPRESENTANTE'" [formGroup]="votacionForm">
       <div class="candidatos-config-header">
         <h4>👥 Lista de Candidatos Postulantes</h4>
         <button type="button" mat-stroked-button color="primary" (click)="agregarCandidatoInput()">
           <mat-icon>person_add</mat-icon> Agregar Candidato
         </button>
       </div>
-      <p class="candidatos-help">Ingrese el nombre completo de los comuneros candidatos (ej: 4 postulantes):</p>
-      <div class="candidato-input-row" *ngFor="let c of candidatosLista; let idx = index; trackBy: trackByIndex">
-        <mat-form-field appearance="outline" class="candidato-field">
-          <mat-label>Candidato #{{ idx + 1 }}</mat-label>
-          <input matInput [(ngModel)]="candidatosLista[idx]" [ngModelOptions]="{standalone: true}" placeholder="Ej: Juan Quispe Morales">
-        </mat-form-field>
-        <button type="button" mat-icon-button color="warn" (click)="removerCandidatoInput(idx)" [disabled]="candidatosLista.length <= 2">
-          <mat-icon>delete</mat-icon>
-        </button>
+      <p class="candidatos-help">Ingrese el nombre completo de los candidatos postulantes:</p>
+      <div formArrayName="candidatos">
+        <div class="candidato-input-row" *ngFor="let c of candidatosFormArray.controls; let idx = index; trackBy: trackByIndex">
+          <mat-form-field appearance="outline" class="candidato-field">
+            <mat-label>Candidato #{{ idx + 1 }}</mat-label>
+            <input matInput [formControl]="getCandidatoControl(idx)" placeholder="Ej: Juan Quispe Morales">
+          </mat-form-field>
+          <button type="button" mat-icon-button color="warn" (click)="removerCandidatoInput(idx)" [disabled]="candidatosFormArray.length <= 2">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
       </div>
     </div>
   </mat-dialog-content>
 
-  <mat-dialog-actions align="end">
+  <mat-dialog-actions align="end" class="dialog-actions-sticky">
     <button mat-button mat-dialog-close>Cancelar</button>
-    <button mat-raised-button color="primary" (click)="guardarVotacion()" [disabled]="votacionForm.invalid">
-      <mat-icon>check</mat-icon> Registrar Votación
+    <button mat-raised-button color="primary" class="btn-guardar-principal" (click)="guardarVotacion()" [disabled]="!esFormularioValido()">
+      <mat-icon>how_to_vote</mat-icon> Iniciar Votación y Abrir Cédula / QR
     </button>
   </mat-dialog-actions>
 </ng-template>
@@ -374,50 +401,75 @@
         <strong>Regla de Mayoría Exigida:</strong> {{ formatTipo(votacionActa.tipo) }}
       </div>
 
-      <div class="acta-table-box">
-        <h4>Escrutinio Oficial de Sufragios</h4>
-        <table class="acta-table">
-          <thead>
-            <tr>
-              <th>Opción</th>
-              <th>Conteo Votos</th>
-              <th>Porcentaje</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>🟢 A Favor</td>
-              <td><strong>{{ getVotosAFavor(votacionActa) }}</strong></td>
-              <td>{{ pctAFavor(votacionActa) }}%</td>
-            </tr>
-            <tr>
-              <td>🔴 En Contra</td>
-              <td><strong>{{ getVotosEnContra(votacionActa) }}</strong></td>
-              <td>{{ pctEnContra(votacionActa) }}%</td>
-            </tr>
-            <tr>
-              <td>⚪ Abstención</td>
-              <td><strong>{{ getVotosAbstencion(votacionActa) }}</strong></td>
-              <td>{{ pctAbstencion(votacionActa) }}%</td>
-            </tr>
-            <tr class="total-row">
-              <td>Total Sufragios Emitidos</td>
-              <td><strong>{{ getTotalVotos(votacionActa) }}</strong></td>
-              <td>100%</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="acta-table-box" *ngIf="votacionActa.tipo === 'ELECCION_REPRESENTANTE'">
+          <h4>Escrutinio Oficial por Candidatos Postulantes</h4>
+          <table class="acta-table">
+            <thead>
+              <tr>
+                <th>Candidato Postulante</th>
+                <th>Conteo Votos</th>
+                <th>Porcentaje</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let cand of (votacionActa.candidatos || [])">
+                <td>👤 {{ cand }}</td>
+                <td><strong>{{ getVotosCandidato(votacionActa, cand) }}</strong></td>
+                <td>{{ getPctCandidato(votacionActa, cand) }}%</td>
+              </tr>
+              <tr class="total-row">
+                <td>Total Sufragios Emitidos</td>
+                <td><strong>{{ getTotalVotos(votacionActa) }}</strong></td>
+                <td>100%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <div class="acta-dictamen" [ngClass]="{
-        'aprobado': votacionActa.resultado?.resultadoDecision === 'APROBADA',
-        'rechazado': votacionActa.resultado?.resultadoDecision === 'RECHAZADA'
-      }">
-        <h4>DICTAMEN FINAL DEL ESCRUTINIO:</h4>
-        <span class="dictamen-value">
-          {{ votacionActa.resultado?.resultadoDecision || 'PROCESO CERRADO' }}
-        </span>
-      </div>
+        <div class="acta-table-box" *ngIf="votacionActa.tipo !== 'ELECCION_REPRESENTANTE'">
+          <h4>Escrutinio Oficial de Sufragios</h4>
+          <table class="acta-table">
+            <thead>
+              <tr>
+                <th>Opción</th>
+                <th>Conteo Votos</th>
+                <th>Porcentaje</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>🟢 A Favor</td>
+                <td><strong>{{ getVotosAFavor(votacionActa) }}</strong></td>
+                <td>{{ pctAFavor(votacionActa) }}%</td>
+              </tr>
+              <tr>
+                <td>🔴 En Contra</td>
+                <td><strong>{{ getVotosEnContra(votacionActa) }}</strong></td>
+                <td>{{ pctEnContra(votacionActa) }}%</td>
+              </tr>
+              <tr>
+                <td>⚪ Abstención</td>
+                <td><strong>{{ getVotosAbstencion(votacionActa) }}</strong></td>
+                <td>{{ pctAbstencion(votacionActa) }}%</td>
+              </tr>
+              <tr class="total-row">
+                <td>Total Sufragios Emitidos</td>
+                <td><strong>{{ getTotalVotos(votacionActa) }}</strong></td>
+                <td>100%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="acta-dictamen" [ngClass]="{
+          'aprobado': votacionActa.resultado?.resultadoDecision === 'APROBADA' || !!votacionActa.resultado?.candidatoGanador,
+          'rechazado': votacionActa.resultado?.resultadoDecision === 'RECHAZADA'
+        }">
+          <h4>DICTAMEN FINAL DEL ESCRUTINIO:</h4>
+          <span class="dictamen-value">
+            {{ votacionActa.resultado?.candidatoGanador ? ('ELECTO(A): ' + votacionActa.resultado?.candidatoGanador) : (votacionActa.resultado?.resultadoDecision || 'PROCESO CERRADO') }}
+          </span>
+        </div>
 
       <div class="acta-signatures">
         <div class="signature-line">

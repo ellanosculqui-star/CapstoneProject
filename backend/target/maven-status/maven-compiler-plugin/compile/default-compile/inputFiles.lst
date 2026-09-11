@@ -24,6 +24,7 @@ D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\controller\
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\dto\acta\ActaRequest.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\dto\acta\ActaResponse.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\dto\acta\AcuerdoDto.java
+D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\dto\acta\FirmaActaDto.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\dto\alerta\AlertaDto.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\dto\asamblea\AsambleaDetailDto.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\dto\asamblea\AsambleaRequest.java
@@ -82,6 +83,7 @@ D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\entity\enum
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\entity\enums\TipoAsamblea.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\entity\enums\TipoComunero.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\entity\enums\TipoVotacion.java
+D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\entity\FirmaActa.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\entity\Multa.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\entity\PagoMulta.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\entity\Rol.java
@@ -104,6 +106,7 @@ D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\repository\
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\repository\AuditoriaRepository.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\repository\ComuneroRepository.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\repository\ConfigMultaRepository.java
+D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\repository\FirmaActaRepository.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\repository\MultaRepository.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\repository\PagoMultaRepository.java
 D:\SISTEMAGESTIONCOMUNAL\backend\src\main\java\com\comunidad\gestion\repository\RolRepository.java

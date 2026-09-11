@@ -16,4 +16,6 @@ public interface AsistenciaService {
     AsistenciaResponse marcarAsistenciaRapida(Long asambleaId, String dniOrCodigo, EstadoAsistencia estado);
 
     List<AsistenciaResponse> listarAsistenciasPorAsamblea(Long asambleaId);
+
+    void marcarAusentesRestantes(Long asambleaId);
 }

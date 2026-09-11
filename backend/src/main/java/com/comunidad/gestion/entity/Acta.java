@@ -67,6 +67,10 @@ public class Acta {
     @Builder.Default
     private List<Acuerdo> acuerdos = new ArrayList<>();
 
+    @OneToMany(mappedBy = "acta", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<FirmaActa> firmas = new ArrayList<>();
+
     @CreatedDate
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion;
